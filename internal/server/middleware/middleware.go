@@ -1,7 +1,11 @@
 package middleware
 
 import (
+	"compress/gzip"
 	"errors"
+	"io"
+	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -75,8 +79,31 @@ func AuthMiddleware(signer auth.HS256Signer) gin.HandlerFunc {
 				return
 			}
 		}
-		
+
 		ctx.Set("userID", claims.UserID)
 		ctx.Next()
+	}
+}
+
+func GzipDecompressMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		encoding := c.GetHeader("Content-Encoding")
+		if strings.Contains(encoding, "gzip") {
+			gr, err := gzip.NewReader(c.Request.Body)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+					"error": "invalid gzip body",
+				})
+				return
+			}
+			defer func(gr *gzip.Reader) {
+				err = gr.Close()
+				if err != nil {
+					log.Printf("failed to close gzip body: %v", err)
+				}
+			}(gr)
+			c.Request.Body = io.NopCloser(gr)
+		}
+		c.Next()
 	}
 }

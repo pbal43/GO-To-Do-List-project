@@ -11,6 +11,7 @@ import (
 	auth "toDoList/internal/server/auth/user_auth"
 	"toDoList/internal/server/middleware"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -73,6 +74,12 @@ func (api *ToDoListApi) ShutDown(ctx context.Context) error {
 
 func (api *ToDoListApi) configRouter() {
 	router := gin.Default()
+
+	router.Use(middleware.GzipDecompressMiddleware())
+
+	router.Use(gzip.Gzip(gzip.DefaultCompression,
+		gzip.WithExcludedExtensions([]string{".png", ".jpg", ".gif", ".mp4"}),
+	))
 
 	tasks := router.Group("/tasks")
 	{
