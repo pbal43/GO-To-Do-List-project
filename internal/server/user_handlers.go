@@ -64,7 +64,7 @@ func (srv *ToDoListApi) register(ctx *gin.Context) {
 	savedUser, err := service.SaveUser(user)
 	if err != nil {
 		if errors.Is(err, user_errors.ErrorUserIsAlreadyExist) {
-			ctx.JSON(http.StatusConflict, gin.H{"error": user_errors.ErrorUserIsAlreadyExist})
+			ctx.JSON(http.StatusConflict, gin.H{"error": user_errors.ErrorUserIsAlreadyExist.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

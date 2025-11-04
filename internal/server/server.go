@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -66,8 +67,8 @@ func (api *ToDoListApi) Run() error {
 	return api.srv.ListenAndServe()
 }
 
-func (api *ToDoListApi) ShutDown() error {
-	return nil
+func (api *ToDoListApi) ShutDown(ctx context.Context) error {
+	return api.srv.Shutdown(ctx)
 }
 
 func (api *ToDoListApi) configRouter() {
