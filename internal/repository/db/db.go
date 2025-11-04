@@ -27,6 +27,10 @@ func NewStorage(connStr string) (*Storage, error) {
 	}, nil
 }
 
+func (s *Storage) Close(ctx context.Context) error {
+	return s.userStorage.db.Close(ctx)
+}
+
 func Migrations(dsn string, migratePath string) error {
 
 	mPath := fmt.Sprintf("file://%s", migratePath)
