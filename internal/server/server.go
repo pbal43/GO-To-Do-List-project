@@ -10,6 +10,7 @@ import (
 	"toDoList/internal/domain/user/user_models"
 	auth "toDoList/internal/server/auth/user_auth"
 	"toDoList/internal/server/middleware"
+	"toDoList/internal/server/workers"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,8 @@ type TaskStorage interface {
 	AddTask(newTask task_models.Task) error
 	UpdateTaskAttributes(task task_models.Task) error
 	DeleteTask(taskID string, userID string) error
+	MarkTaskToDelete(taskID string, userID string) error
+	DeleteMarkedTasks() error
 }
 
 type Storage interface {
@@ -41,9 +44,10 @@ type ToDoListApi struct {
 	srv         *http.Server
 	db          Storage
 	tokenSigner auth.HS256Signer
+	taskDeleter *workers.TaskBatchDeleter
 }
 
-func NewServer(cfg internal.Config, db Storage) *ToDoListApi {
+func NewServer(cfg internal.Config, db Storage, taskDeleter *workers.TaskBatchDeleter) *ToDoListApi {
 
 	signer := auth.HS256Signer{
 		Secret:     []byte("ultraSecretKey123"),
@@ -57,7 +61,7 @@ func NewServer(cfg internal.Config, db Storage) *ToDoListApi {
 		Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 
-	api := ToDoListApi{srv: &HttpSrv, db: db, tokenSigner: signer}
+	api := ToDoListApi{srv: &HttpSrv, db: db, tokenSigner: signer, taskDeleter: taskDeleter}
 
 	api.configRouter()
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +14,8 @@ import (
 	"toDoList/internal/repository/db"
 	"toDoList/internal/repository/inmemory"
 	"toDoList/internal/server"
+	"toDoList/internal/server/workers"
+	"toDoList/pkg/logger"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -35,23 +36,29 @@ func main() {
 	fmt.Println("To-do-list Api is starting")
 	cfg := internal.ReadConfig()
 
+	log := logger.Init(cfg.Debug)
+	log.Debug().Any("config", cfg).Send()
+
+	log.Info().Msg("Server starting...")
+
 	var database server.Storage
 
 	// конфигураця и создание хранилища
 	postgresDB, err := db.NewStorage(cfg.DNS)
 	if err != nil {
-		log.Printf("Postgres недоступен (%v), используем in-memory storage", err)
+		log.Err(err).Msg("Postgres недоступен (%v), используем in-memory storage")
 		inmemoryDB := inmemory.NewInMemoryStorage()
 		database = inmemoryDB
 	} else {
 		database = postgresDB
 		// запуск миграции
 		if err = db.Migrations(cfg.DNS, cfg.MigratePath); err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to migrate db")
 		}
 	}
+	taskDeleter := workers.NewTaskBatchDeleter(database, ctx, cfg.TaskCapacity, log)
 
-	srv := server.NewServer(cfg, database)
+	srv := server.NewServer(cfg, database, taskDeleter)
 
 	wg := sync.WaitGroup{}
 
@@ -63,8 +70,14 @@ func main() {
 			if errors.Is(err, http.ErrServerClosed) {
 				return
 			}
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to start server")
 		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		taskDeleter.Start()
 	}()
 
 	wg.Add(1)
@@ -75,13 +88,18 @@ func main() {
 		defer cancel()
 		err = srv.ShutDown(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Error().Err(err).Msg("failed to shutdown server")
+		}
+		err = taskDeleter.Stop()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to delete marked tasks")
 		}
 		err = postgresDB.Close(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Error().Err(err).Msg("failed to shutdown database")
 		}
-		log.Println("To-do-list Api is shutting down")
+		log.Info().Msg("Server stopped")
 	}()
+
 	wg.Wait()
 }

@@ -76,3 +76,11 @@ func (storage *Storage) DeleteTask(taskID string, userID string) error {
 
 	return task_errors.FoundNothingErr
 }
+
+func (storage *Storage) MarkTaskToDelete(taskID string, userID string) error {
+	return nil
+}
+
+func (storage *Storage) DeleteMarkedTasks() error {
+	return nil
+}

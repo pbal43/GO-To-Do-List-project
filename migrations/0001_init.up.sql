@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     userid varchar(36) NOT NULL,
     status text NOT NULL,
     title text NOT NULL,
-    description text NOT NULL
+    description text NOT NULL,
+    deleted boolean NOT NULL DEFAULT false
 );

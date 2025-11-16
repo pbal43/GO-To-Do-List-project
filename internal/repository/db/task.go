@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 type taskStorage struct {
@@ -121,4 +122,50 @@ func (ts *taskStorage) DeleteTask(taskID string, userID string) error {
 	}
 
 	return nil
+}
+
+func (ts *taskStorage) MarkTaskToDelete(taskID string, userID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd, err := ts.db.Exec(ctx, "UPDATE tasks SET deleted = true WHERE id = $1 AND userid = $2", taskID, userID)
+
+	if err != nil {
+		return err
+	}
+
+	if cmd.RowsAffected() == 0 {
+		return task_errors.FoundNothingErr
+	}
+
+	return nil
+}
+
+func (ts *taskStorage) DeleteMarkedTasks() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := ts.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err = tx.Rollback(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("Transaction rollback failed")
+		}
+	}(tx, ctx)
+
+	_, err = tx.Prepare(ctx, "delete_tasks", "DELETE FROM tasks WHERE deleted = true")
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, "delete_tasks")
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
