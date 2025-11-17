@@ -70,7 +70,7 @@ func (srv *ToDoListApi) register(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	savedUser.Password = user.Password
 	ctx.JSON(http.StatusOK, gin.H{"user": savedUser})
 }
 

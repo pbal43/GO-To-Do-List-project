@@ -24,7 +24,7 @@ func (srv *ToDoListApi) getTasks(ctx *gin.Context) {
 		return
 	}
 
-	taskService := task_service.NewTaskService(srv.db)
+	taskService := task_service.NewTaskService(srv.db, srv.taskDeleter)
 	tasks, err := taskService.GetAllTasks(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
@@ -51,7 +51,7 @@ func (srv *ToDoListApi) getTaskByID(ctx *gin.Context) {
 		return
 	}
 
-	taskService := task_service.NewTaskService(srv.db)
+	taskService := task_service.NewTaskService(srv.db, srv.taskDeleter)
 	foundedTask, err := taskService.GetTaskByID(taskID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -80,7 +80,7 @@ func (srv *ToDoListApi) createTask(ctx *gin.Context) {
 		return
 	}
 
-	taskService := task_service.NewTaskService(srv.db)
+	taskService := task_service.NewTaskService(srv.db, srv.taskDeleter)
 	taskID, err := taskService.CreateTask(newTaskAttributes, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err.Error())
@@ -113,7 +113,7 @@ func (srv *ToDoListApi) updateTask(ctx *gin.Context) {
 		return
 	}
 
-	taskService := task_service.NewTaskService(srv.db)
+	taskService := task_service.NewTaskService(srv.db, srv.taskDeleter)
 	err := taskService.UpdateTask(taskID, userID, newAttributes)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, err.Error())
@@ -137,8 +137,8 @@ func (srv *ToDoListApi) deleteTask(ctx *gin.Context) {
 		return
 	}
 
-	taskService := task_service.NewTaskService(srv.db)
-	if err := taskService.DeleteTaskByID(taskID, userID); err != nil {
+	taskService := task_service.NewTaskService(srv.db, srv.taskDeleter)
+	if err := taskService.MarkTaskToDeleteByID(taskID, userID); err != nil {
 		ctx.JSON(http.StatusBadRequest, err.Error())
 		return
 	}

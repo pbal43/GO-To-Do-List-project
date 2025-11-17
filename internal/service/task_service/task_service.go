@@ -3,6 +3,7 @@ package task_service
 import (
 	"toDoList/internal/domain/task/task_errors"
 	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/server/workers"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -14,15 +15,17 @@ type TaskStorage interface {
 	AddTask(newTask task_models.Task) error
 	UpdateTaskAttributes(task task_models.Task) error
 	DeleteTask(taskID string, userID string) error
+	MarkTaskToDelete(taskID string, userID string) error
 }
 
 type TaskService struct {
-	db    TaskStorage
-	valid *validator.Validate
+	db          TaskStorage
+	valid       *validator.Validate
+	taskDeleter *workers.TaskBatchDeleter
 }
 
-func NewTaskService(db TaskStorage) *TaskService {
-	return &TaskService{db: db, valid: validator.New()}
+func NewTaskService(db TaskStorage, taskDeleter *workers.TaskBatchDeleter) *TaskService {
+	return &TaskService{db: db, valid: validator.New(), taskDeleter: taskDeleter}
 }
 
 func (ts *TaskService) GetAllTasks(userID string) ([]task_models.Task, error) {
@@ -100,5 +103,14 @@ func (ts *TaskService) DeleteTaskByID(taskID string, userID string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (ts *TaskService) MarkTaskToDeleteByID(taskID string, userID string) error {
+	err := ts.db.MarkTaskToDelete(taskID, userID)
+	if err != nil {
+		return err
+	}
+	ts.taskDeleter.Notify()
 	return nil
 }

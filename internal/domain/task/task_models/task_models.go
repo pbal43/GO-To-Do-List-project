@@ -21,6 +21,7 @@ type Task struct {
 	ID         string         `json:"id,omitempty" validate:"required"`
 	UserID     string         `json:"user_uid,omitempty" validate:"required"`
 	Attributes TaskAttributes `json:"attributes,omitempty" validate:"required"`
+	Deleted    bool           `json:"-"`
 }
 
 type TaskAttributes struct {
