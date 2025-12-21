@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 
 	"net/http"
 	"time"
@@ -15,7 +16,16 @@ import (
 	auth "toDoList/internal/server/auth/user_auth"
 )
 
-func AuthMiddleware(signer auth.HS256Signer) gin.HandlerFunc {
+type TokenSigner interface {
+	NewAccessToken(userID string) (string, error)
+	NewRefreshToken(userID string) (string, error)
+	ParseAccessToken(token string, opt auth.ParseOptions) (*auth.Claims, error)
+	ParseRefreshToken(token string, opt auth.ParseOptions) (*jwt.RegisteredClaims, error)
+	GetIssuer() string
+	GetAudience() string
+}
+
+func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		accessToken, err := ctx.Cookie("access_token")
 		if err != nil {
@@ -25,14 +35,14 @@ func AuthMiddleware(signer auth.HS256Signer) gin.HandlerFunc {
 		}
 
 		claims, err := signer.ParseAccessToken(accessToken, auth.ParseOptions{
-			ExpectedIssuer:   signer.Issuer,
-			ExpectedAudience: signer.Audience,
+			ExpectedIssuer:   signer.GetIssuer(),
+			ExpectedAudience: signer.GetAudience(),
 			AllowMethods:     []string{"HS256"},
 			Leeway:           60 * time.Second,
 		})
 
 		if err != nil {
-			if errors.Is(err, authErrors.ErrorInvalidAccessToken) {
+			if errors.Is(err, authErrors.ErrorInvalidAccessToken) || errors.Is(err, jwt.ErrTokenExpired) {
 				refreshToken, err := ctx.Cookie("refresh_token")
 				if err != nil {
 					ctx.JSON(http.StatusUnauthorized, gin.H{"error": authErrors.ErrorMissingRefreshToken})
@@ -41,8 +51,8 @@ func AuthMiddleware(signer auth.HS256Signer) gin.HandlerFunc {
 				}
 
 				refreshClaims, err := signer.ParseRefreshToken(refreshToken, auth.ParseOptions{
-					ExpectedIssuer:   signer.Issuer,
-					ExpectedAudience: signer.Audience,
+					ExpectedIssuer:   signer.GetIssuer(),
+					ExpectedAudience: signer.GetAudience(),
 					AllowMethods:     []string{"HS256"},
 					Leeway:           5 * time.Minute,
 				})
@@ -62,8 +72,8 @@ func AuthMiddleware(signer auth.HS256Signer) gin.HandlerFunc {
 				ctx.SetCookie("access_token", newAccessToken, 3600*24, "/", "127.0.0.1:8080", false, true)
 
 				claims, err = signer.ParseAccessToken(newAccessToken, auth.ParseOptions{
-					ExpectedIssuer:   signer.Issuer,
-					ExpectedAudience: signer.Audience,
+					ExpectedIssuer:   signer.GetIssuer(),
+					ExpectedAudience: signer.GetAudience(),
 					AllowMethods:     []string{"HS256"},
 					Leeway:           60 * time.Second,
 				})

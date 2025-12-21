@@ -14,6 +14,7 @@ import (
 	"toDoList/internal/repository/db"
 	"toDoList/internal/repository/inmemory"
 	"toDoList/internal/server"
+	auth "toDoList/internal/server/auth/user_auth"
 	"toDoList/internal/server/workers"
 	"toDoList/pkg/logger"
 
@@ -58,7 +59,15 @@ func main() {
 	}
 	taskDeleter := workers.NewTaskBatchDeleter(database, ctx, cfg.TaskCapacity, log)
 
-	srv := server.NewServer(cfg, database, taskDeleter)
+	signer := auth.HS256Signer{
+		Secret:     []byte("ultraSecretKey123"),
+		Issuer:     "todolistService",
+		Audience:   "todolistClient",
+		AccessTTL:  15 * time.Minute,
+		RefreshTTL: 24 * 7 * time.Hour,
+	}
+
+	srv := server.NewServer(cfg, database, signer, taskDeleter)
 
 	wg := sync.WaitGroup{}
 

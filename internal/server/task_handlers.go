@@ -90,8 +90,6 @@ func (srv *ToDoListApi) createTask(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"TaskID": taskID})
 }
 
-// ТУТ
-
 func (srv *ToDoListApi) updateTask(ctx *gin.Context) {
 	taskID := ctx.Param("id")
 
