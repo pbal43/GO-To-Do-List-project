@@ -5,8 +5,6 @@ import (
 	"toDoList/internal/domain/task/task_models"
 )
 
-// TODO: протестить локальное хранилище
-
 func (storage *Storage) GetAllTasks(userID string) ([]task_models.Task, error) {
 	if len(storage.tasks) == 0 {
 		return []task_models.Task{}, task_errors.FoundNothingErr

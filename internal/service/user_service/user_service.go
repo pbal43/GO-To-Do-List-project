@@ -70,7 +70,7 @@ func (us *UserService) LoginUser(userReq user_models.UserLoginRequest) (user_mod
 		return user_models.User{}, err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userReq.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userReq.Password)); err != nil {
 		return user_models.User{}, user_errors.ErrorInvalidPassword
 	}
 
@@ -93,7 +93,6 @@ func (us *UserService) UpdateUser(userID string, user user_models.UserRequest) (
 	userInfo.Password = user.Password
 
 	newUserFullInfo, err := us.db.UpdateUser(userInfo)
-
 	if err != nil {
 		return user_models.User{}, err
 	}

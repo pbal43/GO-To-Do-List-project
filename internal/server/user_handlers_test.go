@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -133,32 +135,54 @@ func TestLogin(t *testing.T) {
 	testPassHash, err := bcrypt.GenerateFromPassword([]byte(testPass), bcrypt.DefaultCost)
 	assert.NoError(t, err)
 
+	testToken := "any string"
+
 	type want struct {
 		cookie     bool
 		body       string
 		statusCode int
 	}
 
+	type TokenSignerResp struct {
+		accessToken       string
+		accessTokenError  error
+		refreshToken      string
+		refreshTokenError error
+	}
+
 	type test struct {
-		name        string
-		userJson    string
-		userRequest user_models.UserLoginRequest
-		userFromDB  user_models.User
-		req         string
-		method      string
-		mockFlag    bool
-		want        want
+		name                       string
+		userJson                   string
+		userRequest                user_models.UserLoginRequest
+		userFromDB                 user_models.User
+		req                        string
+		method                     string
+		mockFlagDB                 bool
+		mockFlagTokenSignerAccess  bool
+		mockFlagTokenSignerRefresh bool
+		TokenSignerResponse        TokenSignerResp
+		TokenSignerAccessResp      string
+
+		err  error
+		want want
 	}
 
 	tests := []test{
 		{
-			name:        "Login success",
-			userJson:    fmt.Sprintf(`{"email":"pbsal@yaoo.com","password":"%s"}`, testPass),
-			userRequest: user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
-			userFromDB:  user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
-			req:         "/login",
-			method:      http.MethodPost,
-			mockFlag:    true,
+			name:                       "Login success",
+			userJson:                   fmt.Sprintf(`{"email":"pbsal@yaoo.com","password":"%s"}`, testPass),
+			userRequest:                user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			userFromDB:                 user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
+			req:                        "/login",
+			method:                     http.MethodPost,
+			mockFlagDB:                 true,
+			mockFlagTokenSignerAccess:  true,
+			mockFlagTokenSignerRefresh: true,
+			err:                        nil,
+			TokenSignerResponse: TokenSignerResp{
+				accessToken:  testToken,
+				refreshToken: testToken,
+			},
 			want: want{
 				cookie:     true,
 				body:       `{"Message":"Login successful"}`,
@@ -172,11 +196,82 @@ func TestLogin(t *testing.T) {
 			userFromDB:  user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
 			req:         "/login",
 			method:      http.MethodPost,
-			mockFlag:    true,
+			mockFlagDB:  true,
+			err:         nil,
 			want: want{
 				cookie:     true,
 				body:       `{"error":"the creds are invalid"}`,
 				statusCode: http.StatusUnauthorized,
+			},
+		},
+		{
+			name:        "Invalid JSON request body",
+			userJson:    `{"email":123,"password":"wrongPassword"}`,
+			userRequest: user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			userFromDB:  user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
+			req:         "/login",
+			method:      http.MethodPost,
+			mockFlagDB:  false,
+			err:         nil,
+			want: want{
+				cookie:     true,
+				body:       `{"error":"json: cannot unmarshal number into Go struct field UserLoginRequest.email of type string"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:        "Error from DB",
+			userJson:    fmt.Sprintf(`{"email":"pbsal@yaoo.com","password":"%s"}`, testPass),
+			userRequest: user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			userFromDB:  user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
+			req:         "/login",
+			method:      http.MethodPost,
+			mockFlagDB:  true,
+			err:         context.DeadlineExceeded,
+			want: want{
+				cookie:     true,
+				body:       `{"error":"context deadline exceeded"}`,
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+		{
+			name:                      "Error from tokenSigner Access",
+			userJson:                  `{"email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userRequest:               user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			userFromDB:                user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
+			req:                       "/login",
+			method:                    http.MethodPost,
+			mockFlagDB:                true,
+			err:                       nil,
+			mockFlagTokenSignerAccess: true,
+			TokenSignerResponse: TokenSignerResp{
+				accessTokenError: errors.New("access token error"),
+				refreshToken:     testToken,
+			},
+			want: want{
+				cookie:     true,
+				body:       `{"error":"access token error"}`,
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+		{
+			name:                       "Error from tokenSigner Refresh",
+			userJson:                   `{"email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userRequest:                user_models.UserLoginRequest{Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			userFromDB:                 user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: string(testPassHash)},
+			req:                        "/login",
+			method:                     http.MethodPost,
+			mockFlagDB:                 true,
+			mockFlagTokenSignerAccess:  true,
+			mockFlagTokenSignerRefresh: true,
+			TokenSignerResponse: TokenSignerResp{
+				accessToken:       testToken,
+				refreshTokenError: errors.New("refresh token error"),
+			},
+			want: want{
+				cookie:     true,
+				body:       `{"error":"refresh token error"}`,
+				statusCode: http.StatusInternalServerError,
 			},
 		},
 	}
@@ -185,8 +280,18 @@ func TestLogin(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := mocks.NewStorage(t)
 			srv.db = repo
-			if tc.mockFlag {
-				repo.On("GetUserByEmail", tc.userRequest.Email).Return(tc.userFromDB, nil)
+			jwtTokenSigner := mocks.NewTokenSigner(t)
+			srv.tokenSigner = jwtTokenSigner
+			if tc.mockFlagDB {
+				repo.On("GetUserByEmail", tc.userRequest.Email).Return(tc.userFromDB, tc.err)
+			}
+			if tc.mockFlagTokenSignerAccess {
+				jwtTokenSigner.On("NewAccessToken", mock.Anything).
+					Return(tc.TokenSignerResponse.accessToken, tc.TokenSignerResponse.accessTokenError)
+			}
+			if tc.mockFlagTokenSignerRefresh {
+				jwtTokenSigner.On("NewRefreshToken", mock.Anything).
+					Return(tc.TokenSignerResponse.refreshToken, tc.TokenSignerResponse.refreshTokenError)
 			}
 			req := resty.New().R()
 			req.URL = httpSrv.URL + tc.req
@@ -199,6 +304,277 @@ func TestLogin(t *testing.T) {
 			assert.Equal(t, tc.want.statusCode, res.StatusCode())
 			assert.Equal(t, tc.want.body, string(res.Body()))
 			assert.NotNil(t, res.Cookies())
+		})
+	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+
+	type want struct {
+		body       string
+		statusCode int
+	}
+
+	type test struct {
+		name            string
+		userJson        string
+		userFromDB      user_models.User
+		req             string
+		method          string
+		mockFlag        bool
+		err             error
+		errUpdate       error
+		userIDFromParam string
+		userIDFromCtx   string
+		mockFlagCtx     bool
+		want            want
+	}
+
+	tests := []test{
+		{
+			name:            "Update success",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodPut,
+			mockFlag:        true,
+			err:             nil,
+			userIDFromParam: "/testID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `{"NewUserInfo":{"uuid":"2246b7cc-4afa-4e31-abc9-24f8c95692f1","name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}}`,
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name:            "User from context not exists",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodPut,
+			mockFlag:        false,
+			err:             nil,
+			userIDFromParam: "/testID",
+			mockFlagCtx:     false,
+			want: want{
+				body:       `{"error":"unauthorized"}`,
+				statusCode: http.StatusUnauthorized,
+			},
+		},
+		{
+			name:            "User from context != from param",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodPut,
+			mockFlag:        false,
+			err:             nil,
+			userIDFromParam: "/fakeTestID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `{"error":"unauthorized"}`,
+				statusCode: http.StatusUnauthorized,
+			},
+		},
+		{
+			name:            "Broken JSON",
+			userJson:        `{"name":"pere","email": 1pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodPut,
+			mockFlag:        false,
+			err:             nil,
+			userIDFromParam: "/testID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `"invalid character 'p' after object key:value pair"`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:            "Bad request from DB",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodPut,
+			mockFlag:        true,
+			err:             nil,
+			errUpdate:       errors.New("error from DB"),
+			userIDFromParam: "/testID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `"error from DB"`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gin.New()
+			if tc.mockFlagCtx {
+				r.Use(func(c *gin.Context) {
+					c.Set("userID", tc.userIDFromCtx)
+					c.Next()
+				})
+			}
+			r.PUT("/users/:id", srv.updateUser)
+
+			httpSrv := httptest.NewServer(r)
+			defer httpSrv.Close()
+
+			repo := mocks.NewStorage(t)
+			srv.db = repo
+			if tc.mockFlag {
+				repo.On("GetUserByID", tc.userIDFromCtx).Return(tc.userFromDB, tc.err)
+				repo.On("UpdateUser", mock.MatchedBy(func(user user_models.User) bool {
+					return user.Name == tc.userFromDB.Name && user.Email == tc.userFromDB.Email
+				})).Return(tc.userFromDB, tc.errUpdate)
+			}
+			req := resty.New().R()
+			req.URL = httpSrv.URL + tc.req + tc.userIDFromParam
+			req.Method = tc.method
+			req.Body = tc.userJson
+
+			res, err := req.Send()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want.statusCode, res.StatusCode())
+			if tc.err == nil {
+				assert.Equal(t, tc.want.body, string(res.Body()))
+			} else {
+				assert.Contains(t, string(res.Body()), tc.want.body)
+			}
+		})
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+
+	type want struct {
+		body       string
+		statusCode int
+	}
+
+	type test struct {
+		name            string
+		userJson        string
+		userFromDB      user_models.User
+		req             string
+		method          string
+		mockFlag        bool
+		err             error
+		userIDFromParam string
+		userIDFromCtx   string
+		mockFlagCtx     bool
+		want            want
+	}
+
+	tests := []test{
+		{
+			name:            "Delete success",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodDelete,
+			mockFlag:        true,
+			err:             nil,
+			userIDFromParam: "/testID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `"User was deleted"`,
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name:            "User from context not exists",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodDelete,
+			mockFlag:        false,
+			err:             nil,
+			userIDFromParam: "/testID",
+			mockFlagCtx:     false,
+			want: want{
+				body:       `{"error":"unauthorized"}`,
+				statusCode: http.StatusUnauthorized,
+			},
+		},
+		{
+			name:            "User from context != from param",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodDelete,
+			mockFlag:        false,
+			err:             nil,
+			userIDFromParam: "/fakeTestID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `{"error":"unauthorized"}`,
+				statusCode: http.StatusUnauthorized,
+			},
+		},
+		{
+			name:            "Error from DB",
+			userJson:        `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`,
+			userFromDB:      user_models.User{Uuid: "2246b7cc-4afa-4e31-abc9-24f8c95692f1", Name: "pere", Email: "pbsal@yaoo.com", Password: "unmarshall me"},
+			req:             "/users",
+			method:          http.MethodDelete,
+			mockFlag:        true,
+			err:             errors.New("error from DB"),
+			userIDFromParam: "/testID",
+			userIDFromCtx:   "testID",
+			mockFlagCtx:     true,
+			want: want{
+				body:       `"error from DB"`,
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gin.New()
+			if tc.mockFlagCtx {
+				r.Use(func(c *gin.Context) {
+					c.Set("userID", tc.userIDFromCtx)
+					c.Next()
+				})
+			}
+			r.DELETE("/users/:id", srv.deleteUser)
+
+			httpSrv := httptest.NewServer(r)
+			defer httpSrv.Close()
+
+			repo := mocks.NewStorage(t)
+			srv.db = repo
+			if tc.mockFlag {
+				repo.On("DeleteUser", tc.userIDFromCtx).Return(tc.err)
+			}
+			req := resty.New().R()
+			req.URL = httpSrv.URL + tc.req + tc.userIDFromParam
+			req.Method = tc.method
+			req.Body = tc.userJson
+
+			res, err := req.Send()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want.statusCode, res.StatusCode())
+			if tc.err == nil {
+				assert.Equal(t, tc.want.body, string(res.Body()))
+			} else {
+				assert.Contains(t, string(res.Body()), tc.want.body)
+			}
 		})
 	}
 }

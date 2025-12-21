@@ -130,13 +130,13 @@ func (srv *ToDoListApi) updateUser(ctx *gin.Context) {
 	}
 
 	service := user_service.NewUserService(srv.db)
-	newUserInfo, err := service.UpdateUser(userIDFromParam, newUser) // вернуть полного юзера
+	newUserInfo, err := service.UpdateUser(userIDFromParam, newUser)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"TaskID": newUserInfo})
+	ctx.JSON(http.StatusOK, gin.H{"NewUserInfo": newUserInfo})
 }
 
 func (srv *ToDoListApi) deleteUser(ctx *gin.Context) {

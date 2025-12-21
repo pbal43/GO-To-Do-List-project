@@ -7,19 +7,18 @@ import (
 	"toDoList/internal/domain/task/task_errors"
 	"toDoList/internal/domain/task/task_models"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog/log"
 )
 
 type taskStorage struct {
-	db *pgx.Conn
+	db PgxIface
 }
 
 func (ts *taskStorage) GetAllTasks(userID string) ([]task_models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	rows, err := ts.db.Query(ctx, "SELECT * FROM tasks where userid = $1", userID)
 	if err != nil {
 		return nil, err
@@ -29,13 +28,13 @@ func (ts *taskStorage) GetAllTasks(userID string) ([]task_models.Task, error) {
 
 	for rows.Next() {
 		var task task_models.Task
-
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&task.ID,
 			&task.UserID,
 			&task.Attributes.Status,
 			&task.Attributes.Title,
 			&task.Attributes.Description,
+			&task.Deleted,
 		); err != nil {
 			return nil, err
 		}
@@ -60,6 +59,7 @@ func (ts *taskStorage) GetTaskByID(taskID string, userID string) (task_models.Ta
 			&task.Attributes.Status,
 			&task.Attributes.Title,
 			&task.Attributes.Description,
+			&task.Deleted,
 		)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
