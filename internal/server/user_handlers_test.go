@@ -578,3 +578,151 @@ func TestDeleteUser(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkRegister(b *testing.B) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.POST("/register", srv.register)
+	httpSrv := httptest.NewServer(r)
+	defer httpSrv.Close()
+
+	repo := mocks.NewStorage(b)
+
+	repo.On("SaveUser", mock.Anything).Return(
+		user_models.User{
+			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+			Name:     "pere",
+			Email:    "pbsal@yaoo.com",
+			Password: "unmarshall me",
+		}, nil)
+
+	srv.db = repo
+
+	req := resty.New().R()
+	req.URL = httpSrv.URL + "/register"
+	req.Method = http.MethodPost
+	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
+
+	for i := 0; i < b.N; i++ {
+		_, _ = req.Send()
+	}
+}
+
+func BenchmarkLogin(b *testing.B) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.POST("/login", srv.login)
+	httpSrv := httptest.NewServer(r)
+	defer httpSrv.Close()
+
+	testPass := "unmarshall me"
+	testPassHash, _ := bcrypt.GenerateFromPassword([]byte(testPass), bcrypt.DefaultCost)
+	testToken := "any string"
+
+	repo := mocks.NewStorage(b)
+	repo.On("GetUserByEmail", mock.Anything).Return(
+		user_models.User{
+			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+			Name:     "pere",
+			Email:    "pbsal@yaoo.com",
+			Password: string(testPassHash)},
+		nil)
+	srv.db = repo
+
+	jwtTokenSigner := mocks.NewTokenSigner(b)
+
+	jwtTokenSigner.On("NewAccessToken", mock.Anything).
+		Return(testToken, nil)
+
+	jwtTokenSigner.On("NewRefreshToken", mock.Anything).
+		Return(testToken, nil)
+
+	srv.tokenSigner = jwtTokenSigner
+
+	req := resty.New().R()
+	req.URL = httpSrv.URL + "/login"
+	req.Method = http.MethodPost
+	req.Body = fmt.Sprintf(`{"email":"pbsal@yaoo.com","password":"%s"}`, testPass)
+
+	for i := 0; i < b.N; i++ {
+		_, _ = req.Send()
+	}
+}
+
+func BenchmarkUpdateUser(b *testing.B) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", "testID")
+		c.Next()
+	},
+	)
+
+	r.PUT("/users/:id", srv.updateUser)
+
+	httpSrv := httptest.NewServer(r)
+	defer httpSrv.Close()
+
+	repo := mocks.NewStorage(b)
+	repo.On("GetUserByID", "testID").Return(
+		user_models.User{
+			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+			Name:     "pere",
+			Email:    "pbsal@yaoo.com",
+			Password: "unmarshall me"},
+		nil)
+	repo.On("UpdateUser", mock.Anything).Return(
+		user_models.User{
+			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+			Name:     "pere",
+			Email:    "pbsal@yaoo.com",
+			Password: "unmarshall me"},
+		nil)
+	srv.db = repo
+
+	req := resty.New().R()
+	req.URL = httpSrv.URL + "/users" + "/testID"
+	req.Method = http.MethodPut
+	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
+
+	for i := 0; i < b.N; i++ {
+		_, _ = req.Send()
+	}
+}
+
+func BenchmarkDeleteUser(b *testing.B) {
+	var srv ToDoListApi
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", "testID")
+		c.Next()
+	})
+
+	r.DELETE("/users/:id", srv.deleteUser)
+
+	httpSrv := httptest.NewServer(r)
+	defer httpSrv.Close()
+
+	repo := mocks.NewStorage(b)
+
+	repo.On("DeleteUser", "testID").Return(nil)
+
+	srv.db = repo
+
+	req := resty.New().R()
+	req.URL = httpSrv.URL + "/users" + "/testID"
+	req.Method = http.MethodDelete
+	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
+
+	for i := 0; i < b.N; i++ {
+		_, _ = req.Send()
+	}
+}
