@@ -1,6 +1,6 @@
-# Go_Study_Task_5
+# GO-To-Do-List-project
+Сервер To-Do-List
 
-Описания изменений - в корне в файле desk.txt
 Коллекция Postman v. 2.1 - в корне в файле Task5.postman_collection.json
 
 Запуск сервера:
