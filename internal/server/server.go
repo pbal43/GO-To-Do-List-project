@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 	"toDoList/internal"
 	"toDoList/internal/domain/task/task_models"
 	"toDoList/internal/domain/user/user_models"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserStorage interface {
@@ -40,28 +40,29 @@ type Storage interface {
 	TaskStorage
 }
 
+type TokenSigner interface {
+	NewAccessToken(userID string) (string, error)
+	NewRefreshToken(userID string) (string, error)
+	ParseAccessToken(token string, opt auth.ParseOptions) (*auth.Claims, error)
+	ParseRefreshToken(token string, opt auth.ParseOptions) (*jwt.RegisteredClaims, error)
+	GetIssuer() string
+	GetAudience() string
+}
+
 type ToDoListApi struct {
 	srv         *http.Server
 	db          Storage
-	tokenSigner auth.HS256Signer
+	tokenSigner TokenSigner
 	taskDeleter *workers.TaskBatchDeleter
 }
 
-func NewServer(cfg internal.Config, db Storage, taskDeleter *workers.TaskBatchDeleter) *ToDoListApi {
-
-	signer := auth.HS256Signer{
-		Secret:     []byte("ultraSecretKey123"),
-		Issuer:     "todolistService",
-		Audience:   "todolistClient",
-		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 24 * 7 * time.Hour,
-	}
+func NewServer(cfg internal.Config, db Storage, tokenSigner TokenSigner, taskDeleter *workers.TaskBatchDeleter) *ToDoListApi {
 
 	HttpSrv := http.Server{
 		Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 
-	api := ToDoListApi{srv: &HttpSrv, db: db, tokenSigner: signer, taskDeleter: taskDeleter}
+	api := ToDoListApi{srv: &HttpSrv, db: db, tokenSigner: tokenSigner, taskDeleter: taskDeleter}
 
 	api.configRouter()
 

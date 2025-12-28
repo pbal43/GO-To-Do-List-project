@@ -59,3 +59,11 @@ func (hs HS256Signer) NewRefreshToken(userID string) (string, error) {
 	token.Header["typ"] = "JWT"
 	return token.SignedString(hs.Secret)
 }
+
+func (hs HS256Signer) GetIssuer() string {
+	return hs.Issuer
+}
+
+func (hs HS256Signer) GetAudience() string {
+	return hs.Audience
+}

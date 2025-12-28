@@ -33,6 +33,24 @@ func (_m *Storage) AddTask(newTask task_models.Task) error {
 	return r0
 }
 
+// DeleteMarkedTasks provides a mock function with no fields
+func (_m *Storage) DeleteMarkedTasks() error {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteMarkedTasks")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteTask provides a mock function with given fields: taskID, userID
 func (_m *Storage) DeleteTask(taskID string, userID string) error {
 	ret := _m.Called(taskID, userID)
@@ -211,6 +229,24 @@ func (_m *Storage) GetUserByID(userID string) (user_models.User, error) {
 	}
 
 	return r0, r1
+}
+
+// MarkTaskToDelete provides a mock function with given fields: taskID, userID
+func (_m *Storage) MarkTaskToDelete(taskID string, userID string) error {
+	ret := _m.Called(taskID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkTaskToDelete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(taskID, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // SaveUser provides a mock function with given fields: user

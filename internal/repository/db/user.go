@@ -7,12 +7,12 @@ import (
 	"toDoList/internal/domain/user/user_errors"
 	"toDoList/internal/domain/user/user_models"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type userStorage struct {
-	db *pgx.Conn
+	db PgxIface
 }
 
 func (us *userStorage) GetAllUsers() ([]user_models.User, error) {
