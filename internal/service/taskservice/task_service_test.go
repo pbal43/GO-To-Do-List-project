@@ -1,12 +1,11 @@
-package task_service
+package taskservice
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 	"toDoList/internal/server/mocks"
 	"toDoList/internal/server/workers"
 
@@ -17,26 +16,26 @@ import (
 
 func TestGetAllTasks(t *testing.T) {
 	type want struct {
-		tasks []task_models.Task
+		tasks []taskmodels.Task
 		err   error
 	}
 
 	tests := []struct {
 		name        string
 		userID      string
-		dataFromDB  []task_models.Task
+		dataFromDB  []taskmodels.Task
 		errorFromDB error
 		want        want
 	}{
 		{
 			name:   "success",
 			userID: "user1",
-			dataFromDB: []task_models.Task{
+			dataFromDB: []taskmodels.Task{
 				{
 					ID:     "1",
 					UserID: "user1",
-					Attributes: task_models.TaskAttributes{
-						Status:      task_models.StatusNew,
+					Attributes: taskmodels.TaskAttributes{
+						Status:      taskmodels.StatusNew,
 						Title:       "Task1",
 						Description: "Desc1",
 					},
@@ -44,12 +43,12 @@ func TestGetAllTasks(t *testing.T) {
 			},
 			errorFromDB: nil,
 			want: want{
-				tasks: []task_models.Task{
+				tasks: []taskmodels.Task{
 					{
 						ID:     "1",
 						UserID: "user1",
-						Attributes: task_models.TaskAttributes{
-							Status:      task_models.StatusNew,
+						Attributes: taskmodels.TaskAttributes{
+							Status:      taskmodels.StatusNew,
 							Title:       "Task1",
 							Description: "Desc1",
 						},
@@ -61,10 +60,10 @@ func TestGetAllTasks(t *testing.T) {
 		{
 			name:        "db error",
 			userID:      "user2",
-			dataFromDB:  []task_models.Task{},
+			dataFromDB:  []taskmodels.Task{},
 			errorFromDB: errors.New("db error"),
 			want: want{
-				tasks: []task_models.Task{},
+				tasks: []taskmodels.Task{},
 				err:   errors.New("db error"),
 			},
 		},
@@ -86,7 +85,7 @@ func TestGetAllTasks(t *testing.T) {
 
 func TestGetTaskByID(t *testing.T) {
 	type want struct {
-		task task_models.Task
+		task taskmodels.Task
 		err  error
 	}
 
@@ -94,7 +93,7 @@ func TestGetTaskByID(t *testing.T) {
 		name        string
 		taskID      string
 		userID      string
-		dataFromDB  task_models.Task
+		dataFromDB  taskmodels.Task
 		errorFromDB error
 		want        want
 	}{
@@ -102,22 +101,22 @@ func TestGetTaskByID(t *testing.T) {
 			name:   "success",
 			taskID: "1",
 			userID: "u1",
-			dataFromDB: task_models.Task{
+			dataFromDB: taskmodels.Task{
 				ID:     "1",
 				UserID: "u1",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusNew,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusNew,
 					Title:       "Task1",
 					Description: "Desc1",
 				},
 			},
 			errorFromDB: nil,
 			want: want{
-				task: task_models.Task{
+				task: taskmodels.Task{
 					ID:     "1",
 					UserID: "u1",
-					Attributes: task_models.TaskAttributes{
-						Status:      task_models.StatusNew,
+					Attributes: taskmodels.TaskAttributes{
+						Status:      taskmodels.StatusNew,
 						Title:       "Task1",
 						Description: "Desc1",
 					},
@@ -129,22 +128,22 @@ func TestGetTaskByID(t *testing.T) {
 			name:        "empty taskID",
 			taskID:      "",
 			userID:      "u1",
-			dataFromDB:  task_models.Task{},
+			dataFromDB:  taskmodels.Task{},
 			errorFromDB: nil,
 			want: want{
-				task: task_models.Task{},
-				err:  task_errors.EpmtyStringErr,
+				task: taskmodels.Task{},
+				err:  taskerrors.ErrEmptyString,
 			},
 		},
 		{
 			name:        "db error",
 			taskID:      "2",
 			userID:      "u1",
-			dataFromDB:  task_models.Task{},
-			errorFromDB: task_errors.FoundNothingErr,
+			dataFromDB:  taskmodels.Task{},
+			errorFromDB: taskerrors.ErrFoundNothing,
 			want: want{
-				task: task_models.Task{},
-				err:  task_errors.FoundNothingErr,
+				task: taskmodels.Task{},
+				err:  taskerrors.ErrFoundNothing,
 			},
 		},
 	}
@@ -174,7 +173,7 @@ func TestCreateTask(t *testing.T) {
 	tests := []struct {
 		name       string
 		userID     string
-		attributes task_models.TaskAttributes
+		attributes taskmodels.TaskAttributes
 		dbMock     bool
 		dbErr      error
 		want       want
@@ -182,8 +181,8 @@ func TestCreateTask(t *testing.T) {
 		{
 			name:   "success",
 			userID: "u1",
-			attributes: task_models.TaskAttributes{
-				Status:      task_models.StatusNew,
+			attributes: taskmodels.TaskAttributes{
+				Status:      taskmodels.StatusNew,
 				Title:       "Task1",
 				Description: "Desc1",
 			},
@@ -197,7 +196,7 @@ func TestCreateTask(t *testing.T) {
 		{
 			name:   "invalid status",
 			userID: "u1",
-			attributes: task_models.TaskAttributes{
+			attributes: taskmodels.TaskAttributes{
 				Status:      "invalid",
 				Title:       "Task1",
 				Description: "Desc1",
@@ -206,7 +205,7 @@ func TestCreateTask(t *testing.T) {
 			dbErr:  nil,
 			want: want{
 				taskID: "",
-				err:    task_errors.WrongStatusErr,
+				err:    taskerrors.ErrWrongStatus,
 			},
 		},
 	}
@@ -240,8 +239,8 @@ func TestUpdateTask(t *testing.T) {
 		name          string
 		taskID        string
 		userID        string
-		newAttributes task_models.TaskAttributes
-		existingTask  task_models.Task
+		newAttributes taskmodels.TaskAttributes
+		existingTask  taskmodels.Task
 		getTaskErr    error
 		updateTaskErr error
 		dbMockGet     bool
@@ -254,16 +253,16 @@ func TestUpdateTask(t *testing.T) {
 			name:   "success",
 			taskID: "1",
 			userID: "user1",
-			newAttributes: task_models.TaskAttributes{
-				Status:      task_models.StatusNew,
+			newAttributes: taskmodels.TaskAttributes{
+				Status:      taskmodels.StatusNew,
 				Title:       "Updated Title",
 				Description: "Updated Description",
 			},
-			existingTask: task_models.Task{
+			existingTask: taskmodels.Task{
 				ID:     "1",
 				UserID: "user1",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusNew,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusNew,
 					Title:       "Old Title",
 					Description: "Old Description",
 				},
@@ -278,7 +277,7 @@ func TestUpdateTask(t *testing.T) {
 			name:   "invalid_status",
 			taskID: "1",
 			userID: "user1",
-			newAttributes: task_models.TaskAttributes{
+			newAttributes: taskmodels.TaskAttributes{
 				Status:      "invalid_status",
 				Title:       "Title",
 				Description: "Description",
@@ -286,48 +285,48 @@ func TestUpdateTask(t *testing.T) {
 			dbMockGet:    false,
 			dbMockUpdate: false,
 			want: want{
-				err: task_errors.WrongStatusErr,
+				err: taskerrors.ErrWrongStatus,
 			},
 		},
 		{
 			name:   "get_task_error",
 			taskID: "1",
 			userID: "user1",
-			newAttributes: task_models.TaskAttributes{
-				Status:      task_models.StatusNew,
+			newAttributes: taskmodels.TaskAttributes{
+				Status:      taskmodels.StatusNew,
 				Title:       "Title",
 				Description: "Description",
 			},
-			getTaskErr:   fmt.Errorf("db error on get"),
+			getTaskErr:   taskerrors.ErrDBOnGet,
 			dbMockGet:    true,
 			dbMockUpdate: false,
 			want: want{
-				err: fmt.Errorf("db error on get"),
+				err: taskerrors.ErrDBOnGet,
 			},
 		},
 		{
 			name:   "update_task_error",
 			taskID: "1",
 			userID: "user1",
-			newAttributes: task_models.TaskAttributes{
-				Status:      task_models.StatusNew,
+			newAttributes: taskmodels.TaskAttributes{
+				Status:      taskmodels.StatusNew,
 				Title:       "Title",
 				Description: "Description",
 			},
-			existingTask: task_models.Task{
+			existingTask: taskmodels.Task{
 				ID:     "1",
 				UserID: "user1",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusNew,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusNew,
 					Title:       "Old Title",
 					Description: "Old Description",
 				},
 			},
 			dbMockGet:     true,
 			dbMockUpdate:  true,
-			updateTaskErr: fmt.Errorf("db error on update"),
+			updateTaskErr: taskerrors.ErrDBOnUpdate,
 			want: want{
-				err: fmt.Errorf("db error on update"),
+				err: taskerrors.ErrDBOnUpdate,
 			},
 		},
 	}
@@ -389,14 +388,6 @@ func TestDeleteTaskByID(t *testing.T) {
 	}
 }
 
-type mockTaskDeleter struct {
-	called bool
-}
-
-func (m *mockTaskDeleter) Notify() {
-	m.called = true
-}
-
 func TestMarkTaskToDeleteByID(t *testing.T) {
 	type want struct {
 		err error
@@ -424,9 +415,9 @@ func TestMarkTaskToDeleteByID(t *testing.T) {
 			name:    "db error",
 			taskID:  "task2",
 			userID:  "user1",
-			dbError: task_errors.FoundNothingErr,
+			dbError: taskerrors.ErrFoundNothing,
 			want: want{
-				err: task_errors.FoundNothingErr,
+				err: taskerrors.ErrFoundNothing,
 			},
 		},
 	}
@@ -439,7 +430,7 @@ func TestMarkTaskToDeleteByID(t *testing.T) {
 			ctx := context.Background()
 
 			logger := log.With().Logger()
-			deleter := workers.NewTaskBatchDeleter(repo, ctx, 10, logger)
+			deleter := workers.NewTaskBatchDeleter(ctx, repo, 10, logger)
 
 			service := NewTaskService(repo, deleter)
 

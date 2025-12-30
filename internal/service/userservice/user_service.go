@@ -1,8 +1,8 @@
-package user_service
+package userservice
 
 import (
-	"toDoList/internal/domain/user/user_errors"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/user/usererrors"
+	"toDoList/internal/domain/user/usermodels"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -10,11 +10,11 @@ import (
 )
 
 type UserStorage interface {
-	GetAllUsers() ([]user_models.User, error)
-	SaveUser(user user_models.User) (user_models.User, error)
-	GetUserByID(userID string) (user_models.User, error)
-	GetUserByEmail(email string) (user_models.User, error)
-	UpdateUser(user user_models.User) (user_models.User, error)
+	GetAllUsers() ([]usermodels.User, error)
+	SaveUser(user usermodels.User) (usermodels.User, error)
+	GetUserByID(userID string) (usermodels.User, error)
+	GetUserByEmail(email string) (usermodels.User, error)
+	UpdateUser(user usermodels.User) (usermodels.User, error)
 	DeleteUser(userID string) error
 }
 
@@ -27,65 +27,65 @@ func NewUserService(db UserStorage) *UserService {
 	return &UserService{db: db, valid: validator.New()}
 }
 
-func (us *UserService) GetAllUsers() ([]user_models.User, error) {
+func (us *UserService) GetAllUsers() ([]usermodels.User, error) {
 	return us.db.GetAllUsers()
 }
 
-func (us *UserService) GetUserByID(userID string) (user_models.User, error) {
+func (us *UserService) GetUserByID(userID string) (usermodels.User, error) {
 	if userID == "" {
-		return user_models.User{}, user_errors.ErrorUserEmptyInsert
+		return usermodels.User{}, usererrors.ErrUserEmptyInsert
 	}
 	user, err := us.db.GetUserByID(userID)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 	return user, nil
 }
 
-func (us *UserService) SaveUser(newUser user_models.UserRequest) (user_models.User, error) {
+func (us *UserService) SaveUser(newUser usermodels.UserRequest) (usermodels.User, error) {
 	err := us.valid.Struct(newUser)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
-	var user user_models.User
+	var user usermodels.User
 
 	uid := uuid.New().String()
 	hash, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
-	user.Uuid = uid
+	user.UUID = uid
 	user.Name = newUser.Name
 	user.Email = newUser.Email
 	user.Password = string(hash)
 	return us.db.SaveUser(user)
 }
 
-func (us *UserService) LoginUser(userReq user_models.UserLoginRequest) (user_models.User, error) {
+func (us *UserService) LoginUser(userReq usermodels.UserLoginRequest) (usermodels.User, error) {
 	email := userReq.Email
 	dbUser, err := us.db.GetUserByEmail(email)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userReq.Password)); err != nil {
-		return user_models.User{}, user_errors.ErrorInvalidPassword
+		return usermodels.User{}, usererrors.ErrInvalidPassword
 	}
 
 	return dbUser, nil
 }
 
-func (us *UserService) UpdateUser(userID string, user user_models.UserRequest) (user_models.User, error) {
+func (us *UserService) UpdateUser(userID string, user usermodels.UserRequest) (usermodels.User, error) {
 	err := us.valid.Struct(user)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
 	userInfo, err := us.db.GetUserByID(userID)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
 	userInfo.Name = user.Name
@@ -94,7 +94,7 @@ func (us *UserService) UpdateUser(userID string, user user_models.UserRequest) (
 
 	newUserFullInfo, err := us.db.UpdateUser(userInfo)
 	if err != nil {
-		return user_models.User{}, err
+		return usermodels.User{}, err
 	}
 
 	return newUserFullInfo, nil

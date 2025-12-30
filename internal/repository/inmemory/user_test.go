@@ -2,8 +2,8 @@ package inmemory
 
 import (
 	"testing"
-	"toDoList/internal/domain/user/user_errors"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/user/usererrors"
+	"toDoList/internal/domain/user/usermodels"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -11,15 +11,15 @@ import (
 func TestStorage_Users(t *testing.T) {
 	storage := NewInMemoryStorage()
 
-	user1 := user_models.User{
-		Uuid:     "user1",
+	user1 := usermodels.User{
+		UUID:     "user1",
 		Name:     "Alice",
 		Email:    "alice@example.com",
 		Password: "pass1",
 	}
 
-	user2 := user_models.User{
-		Uuid:     "user2",
+	user2 := usermodels.User{
+		UUID:     "user2",
 		Name:     "Bob",
 		Email:    "bob@example.com",
 		Password: "pass2",
@@ -37,7 +37,7 @@ func TestStorage_Users(t *testing.T) {
 				return storage.SaveUser(user1)
 			},
 			check: func(t *testing.T, result any) {
-				savedUser := result.(user_models.User)
+				savedUser := result.(usermodels.User)
 				assert.Equal(t, "Alice", savedUser.Name)
 				assert.Len(t, storage.users, 1)
 			},
@@ -46,15 +46,15 @@ func TestStorage_Users(t *testing.T) {
 		{
 			name: "SaveUser_duplicate_email",
 			action: func() (any, error) {
-				return storage.SaveUser(user_models.User{
-					Uuid:     "user3",
+				return storage.SaveUser(usermodels.User{
+					UUID:     "user3",
 					Name:     "Alice2",
 					Email:    "alice@example.com",
 					Password: "pass3",
 				})
 			},
-			check:       func(t *testing.T, result any) {},
-			expectError: user_errors.ErrorUserIsAlreadyExist,
+			check:       func(_ *testing.T, _ any) {},
+			expectError: usererrors.ErrUserIsAlreadyExist,
 		},
 		{
 			name: "GetAllUsers_success",
@@ -62,7 +62,7 @@ func TestStorage_Users(t *testing.T) {
 				return storage.GetAllUsers()
 			},
 			check: func(t *testing.T, result any) {
-				users := result.([]user_models.User)
+				users := result.([]usermodels.User)
 				assert.Len(t, users, 1)
 				assert.Equal(t, "Alice", users[0].Name)
 			},
@@ -74,7 +74,7 @@ func TestStorage_Users(t *testing.T) {
 				return storage.GetUserByID("user1")
 			},
 			check: func(t *testing.T, result any) {
-				user := result.(user_models.User)
+				user := result.(usermodels.User)
 				assert.Equal(t, "Alice", user.Name)
 			},
 			expectError: nil,
@@ -84,8 +84,8 @@ func TestStorage_Users(t *testing.T) {
 			action: func() (any, error) {
 				return storage.GetUserByID("user404")
 			},
-			check:       func(t *testing.T, result any) {},
-			expectError: user_errors.ErrorUserNotExist,
+			check:       func(_ *testing.T, _ any) {},
+			expectError: usererrors.ErrUserNotExist,
 		},
 		{
 			name: "GetUserByEmail_success",
@@ -93,7 +93,7 @@ func TestStorage_Users(t *testing.T) {
 				return storage.GetUserByEmail("alice@example.com")
 			},
 			check: func(t *testing.T, result any) {
-				user := result.(user_models.User)
+				user := result.(usermodels.User)
 				assert.Equal(t, "Alice", user.Name)
 			},
 			expectError: nil,
@@ -103,8 +103,8 @@ func TestStorage_Users(t *testing.T) {
 			action: func() (any, error) {
 				return storage.GetUserByEmail("unknown@example.com")
 			},
-			check:       func(t *testing.T, result any) {},
-			expectError: user_errors.ErrorUserNotExist,
+			check:       func(_ *testing.T, _ any) {},
+			expectError: usererrors.ErrUserNotExist,
 		},
 		{
 			name: "UpdateUser_success",
@@ -113,7 +113,7 @@ func TestStorage_Users(t *testing.T) {
 				return storage.UpdateUser(user1)
 			},
 			check: func(t *testing.T, result any) {
-				user := result.(user_models.User)
+				user := result.(usermodels.User)
 				assert.Equal(t, "Alice Updated", user.Name)
 				assert.Equal(t, "Alice Updated", storage.users["user1"].Name)
 			},
@@ -124,15 +124,15 @@ func TestStorage_Users(t *testing.T) {
 			action: func() (any, error) {
 				return storage.UpdateUser(user2)
 			},
-			check:       func(t *testing.T, result any) {},
-			expectError: user_errors.ErrorUserNotExist,
+			check:       func(_ *testing.T, _ any) {},
+			expectError: usererrors.ErrUserNotExist,
 		},
 		{
 			name: "DeleteUser_success",
 			action: func() (any, error) {
 				return nil, storage.DeleteUser("user1")
 			},
-			check: func(t *testing.T, result any) {
+			check: func(t *testing.T, _ any) {
 				_, ok := storage.users["user1"]
 				assert.False(t, ok)
 			},
@@ -143,8 +143,8 @@ func TestStorage_Users(t *testing.T) {
 			action: func() (any, error) {
 				return nil, storage.DeleteUser("user404")
 			},
-			check:       func(t *testing.T, result any) {},
-			expectError: user_errors.ErrorUserNotExist,
+			check:       func(_ *testing.T, _ any) {},
+			expectError: usererrors.ErrUserNotExist,
 		},
 	}
 

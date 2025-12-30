@@ -4,15 +4,15 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
-	"log"
 	"strings"
+	"toDoList/internal"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 
 	"net/http"
-	"time"
-	authErrors "toDoList/internal/server/auth/auth_errors"
+	authErrors "toDoList/internal/server/auth/autherrors"
 	auth "toDoList/internal/server/auth/user_auth"
 )
 
@@ -25,12 +25,13 @@ type TokenSigner interface {
 	GetAudience() string
 }
 
+//nolint:gocognit // сложная логика мидлваря — допускаем
 func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		accessToken, err := ctx.Cookie("access_token")
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": authErrors.ErrorMissingAccessToken})
-			ctx.Abort() // чтобы дальше на след функцию хендлера не ушло
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": authErrors.ErrMissingAccessToken})
+			ctx.Abort()
 			return
 		}
 
@@ -38,51 +39,69 @@ func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 			ExpectedIssuer:   signer.GetIssuer(),
 			ExpectedAudience: signer.GetAudience(),
 			AllowMethods:     []string{"HS256"},
-			Leeway:           60 * time.Second,
+			Leeway:           internal.MinOne,
 		})
 
+		//nolint:nestif // Нужно оставить ошибки на проверки
 		if err != nil {
-			if errors.Is(err, authErrors.ErrorInvalidAccessToken) || errors.Is(err, jwt.ErrTokenExpired) {
-				refreshToken, err := ctx.Cookie("refresh_token")
-				if err != nil {
-					ctx.JSON(http.StatusUnauthorized, gin.H{"error": authErrors.ErrorMissingRefreshToken})
+			if errors.Is(err, authErrors.ErrInvalidAccessToken) ||
+				errors.Is(err, jwt.ErrTokenExpired) {
+				refreshToken, errTok := ctx.Cookie("refresh_token")
+				if errTok != nil {
+					ctx.JSON(
+						http.StatusUnauthorized,
+						gin.H{"error": authErrors.ErrMissingRefreshToken},
+					)
 					ctx.Abort()
 					return
 				}
 
-				refreshClaims, err := signer.ParseRefreshToken(refreshToken, auth.ParseOptions{
-					ExpectedIssuer:   signer.GetIssuer(),
-					ExpectedAudience: signer.GetAudience(),
-					AllowMethods:     []string{"HS256"},
-					Leeway:           5 * time.Minute,
-				})
-				if err != nil {
+				refreshClaims, errParseRefresh := signer.ParseRefreshToken(
+					refreshToken,
+					auth.ParseOptions{
+						ExpectedIssuer:   signer.GetIssuer(),
+						ExpectedAudience: signer.GetAudience(),
+						AllowMethods:     []string{"HS256"},
+						Leeway:           internal.MinFive,
+					},
+				)
+				if errParseRefresh != nil {
 					ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 					ctx.Abort()
 					return
 				}
 
-				newAccessToken, err := signer.NewAccessToken(refreshClaims.Subject)
-				if err != nil {
+				newAccessToken, errParseAccess := signer.NewAccessToken(refreshClaims.Subject)
+				if errParseAccess != nil {
 					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					ctx.Abort()
 					return
 				}
 
-				ctx.SetCookie("access_token", newAccessToken, 3600*24, "/", "127.0.0.1:8080", false, true)
+				ctx.SetCookie(
+					"access_token",
+					newAccessToken,
+					internal.MaxAgeForAccessToken,
+					"/",
+					"127.0.0.1:8080",
+					false,
+					true,
+				)
 
 				claims, err = signer.ParseAccessToken(newAccessToken, auth.ParseOptions{
 					ExpectedIssuer:   signer.GetIssuer(),
 					ExpectedAudience: signer.GetAudience(),
 					AllowMethods:     []string{"HS256"},
-					Leeway:           60 * time.Second,
+					Leeway:           internal.MinOne,
 				})
 				if err != nil {
-					ctx.JSON(http.StatusInternalServerError, gin.H{"error": authErrors.ErrorFailToParseNewAccessToken})
+					ctx.JSON(
+						http.StatusInternalServerError,
+						gin.H{"error": authErrors.ErrFailToParseNewAccessToken},
+					)
 					ctx.Abort()
 					return
 				}
-
 			} else {
 				ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 				ctx.Abort()

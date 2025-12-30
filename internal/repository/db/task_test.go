@@ -3,8 +3,8 @@ package db
 import (
 	"errors"
 	"testing"
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -15,17 +15,17 @@ import (
 func TestTaskStorage_AddTask(t *testing.T) {
 	tests := []struct {
 		name            string
-		task            task_models.Task
+		task            taskmodels.Task
 		shouldDuplicate bool
 		wantErr         error
 	}{
 		{
 			name: "success",
-			task: task_models.Task{
+			task: taskmodels.Task{
 				ID:     "1",
 				UserID: "u1",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusNew,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusNew,
 					Title:       "t1",
 					Description: "d1",
 				},
@@ -33,17 +33,17 @@ func TestTaskStorage_AddTask(t *testing.T) {
 		},
 		{
 			name: "duplicate",
-			task: task_models.Task{
+			task: taskmodels.Task{
 				ID:     "2",
 				UserID: "u2",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusInProgress,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusInProgress,
 					Title:       "t2",
 					Description: "d2",
 				},
 			},
 			shouldDuplicate: true,
-			wantErr:         task_errors.ErrorTaskIsAlreadyExist,
+			wantErr:         taskerrors.ErrTaskIsAlreadyExist,
 		},
 	}
 
@@ -77,16 +77,16 @@ func TestTaskStorage_AddTask(t *testing.T) {
 func TestTaskStorage_UpdateTaskAttributes(t *testing.T) {
 	tests := []struct {
 		name         string
-		task         task_models.Task
+		task         taskmodels.Task
 		rowsAffected int64
 		wantErr      error
 	}{
 		{
 			"success",
-			task_models.Task{
+			taskmodels.Task{
 				ID: "1",
-				Attributes: task_models.TaskAttributes{
-					Status:      task_models.StatusNew,
+				Attributes: taskmodels.TaskAttributes{
+					Status:      taskmodels.StatusNew,
 					Title:       "t1",
 					Description: "d1",
 				},
@@ -96,9 +96,9 @@ func TestTaskStorage_UpdateTaskAttributes(t *testing.T) {
 		},
 		{
 			"not found",
-			task_models.Task{ID: "404"},
+			taskmodels.Task{ID: "404"},
 			0,
-			task_errors.FoundNothingErr,
+			taskerrors.ErrFoundNothing,
 		},
 	}
 
@@ -133,7 +133,7 @@ func TestTaskStorage_DeleteTask(t *testing.T) {
 		wantErr      error
 	}{
 		{"success", "1", "u1", 1, nil},
-		{"not found", "404", "u2", 0, task_errors.FoundNothingErr},
+		{"not found", "404", "u2", 0, taskerrors.ErrFoundNothing},
 	}
 
 	for _, tt := range tests {
@@ -167,7 +167,7 @@ func TestTaskStorage_MarkTaskToDelete(t *testing.T) {
 		wantErr      error
 	}{
 		{"success", "1", "u1", 1, nil},
-		{"not found", "404", "u2", 0, task_errors.FoundNothingErr},
+		{"not found", "404", "u2", 0, taskerrors.ErrFoundNothing},
 	}
 
 	for _, tt := range tests {
@@ -214,6 +214,7 @@ func TestTaskStorage_DeleteMarkedTasks(t *testing.T) {
 
 			mock.ExpectBegin()
 
+			//nolint:nestif // Все еще читабельно, нет смысла разносить
 			if tt.prepareErr != nil {
 				mock.ExpectPrepare("delete_tasks", "DELETE FROM tasks WHERE deleted = true").
 					WillReturnError(tt.prepareErr)
@@ -251,16 +252,32 @@ func TestTaskStorage_GetAllTasks(t *testing.T) {
 	tests := []struct {
 		name     string
 		userID   string
-		mockData []task_models.Task
+		mockData []taskmodels.Task
 		mockErr  error
 		wantErr  bool
 	}{
 		{
 			name:   "success",
 			userID: "user1",
-			mockData: []task_models.Task{
-				{ID: "1", UserID: "user1", Attributes: task_models.TaskAttributes{Status: "New", Title: "t1", Description: "d1"}},
-				{ID: "2", UserID: "user1", Attributes: task_models.TaskAttributes{Status: "Done", Title: "t2", Description: "d2"}},
+			mockData: []taskmodels.Task{
+				{
+					ID:     "1",
+					UserID: "user1",
+					Attributes: taskmodels.TaskAttributes{
+						Status:      "New",
+						Title:       "t1",
+						Description: "d1",
+					},
+				},
+				{
+					ID:     "2",
+					UserID: "user1",
+					Attributes: taskmodels.TaskAttributes{
+						Status:      "Done",
+						Title:       "t2",
+						Description: "d2",
+					},
+				},
 			},
 			mockErr: nil,
 			wantErr: false,
@@ -280,7 +297,7 @@ func TestTaskStorage_GetAllTasks(t *testing.T) {
 			ts := &taskStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM tasks where userid = \\$1").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks where userid = \\$1").
 					WithArgs(tt.userID).
 					WillReturnError(tt.mockErr)
 			} else {
@@ -288,7 +305,7 @@ func TestTaskStorage_GetAllTasks(t *testing.T) {
 				for _, task := range tt.mockData {
 					rows.AddRow(task.ID, task.UserID, task.Attributes.Status, task.Attributes.Title, task.Attributes.Description, task.Deleted)
 				}
-				mock.ExpectQuery("SELECT \\* FROM tasks where userid = \\$1").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks where userid = \\$1").
 					WithArgs(tt.userID).
 					WillReturnRows(rows)
 			}
@@ -311,7 +328,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 		name     string
 		taskID   string
 		userID   string
-		mockData task_models.Task
+		mockData taskmodels.Task
 		mockErr  error
 		wantErr  error
 	}{
@@ -319,8 +336,8 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 			name:   "success",
 			taskID: "1",
 			userID: "user1",
-			mockData: task_models.Task{
-				ID: "1", UserID: "user1", Attributes: task_models.TaskAttributes{Status: "New", Title: "t1", Description: "d1"},
+			mockData: taskmodels.Task{
+				ID: "1", UserID: "user1", Attributes: taskmodels.TaskAttributes{Status: "New", Title: "t1", Description: "d1"},
 			},
 			wantErr: nil,
 		},
@@ -329,7 +346,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 			taskID:  "2",
 			userID:  "user1",
 			mockErr: pgx.ErrNoRows,
-			wantErr: task_errors.FoundNothingErr,
+			wantErr: taskerrors.ErrFoundNothing,
 		},
 		{
 			name:    "query_error",
@@ -347,7 +364,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 			ts := &taskStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM tasks WHERE id = \\$1 AND userid = \\$2").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks WHERE id = \\$1 AND userid = \\$2").
 					WithArgs(tt.taskID, tt.userID).
 					WillReturnError(tt.mockErr)
 			} else {
@@ -355,7 +372,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 					AddRow(tt.mockData.ID, tt.mockData.UserID, tt.mockData.Attributes.Status,
 						tt.mockData.Attributes.Title, tt.mockData.Attributes.Description, tt.mockData.Deleted)
 
-				mock.ExpectQuery("SELECT \\* FROM tasks WHERE id = \\$1 AND userid = \\$2").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks WHERE id = \\$1 AND userid = \\$2").
 					WithArgs(tt.taskID, tt.userID).
 					WillReturnRows(rows)
 			}

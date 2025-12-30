@@ -1,8 +1,8 @@
-package task_service
+package taskservice
 
 import (
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 	"toDoList/internal/server/workers"
 
 	"github.com/go-playground/validator/v10"
@@ -10,10 +10,10 @@ import (
 )
 
 type TaskStorage interface {
-	GetAllTasks(userID string) ([]task_models.Task, error)
-	GetTaskByID(taskID string, userID string) (task_models.Task, error)
-	AddTask(newTask task_models.Task) error
-	UpdateTaskAttributes(task task_models.Task) error
+	GetAllTasks(userID string) ([]taskmodels.Task, error)
+	GetTaskByID(taskID string, userID string) (taskmodels.Task, error)
+	AddTask(newTask taskmodels.Task) error
+	UpdateTaskAttributes(task taskmodels.Task) error
 	DeleteTask(taskID string, userID string) error
 	MarkTaskToDelete(taskID string, userID string) error
 }
@@ -28,24 +28,24 @@ func NewTaskService(db TaskStorage, taskDeleter *workers.TaskBatchDeleter) *Task
 	return &TaskService{db: db, valid: validator.New(), taskDeleter: taskDeleter}
 }
 
-func (ts *TaskService) GetAllTasks(userID string) ([]task_models.Task, error) {
+func (ts *TaskService) GetAllTasks(userID string) ([]taskmodels.Task, error) {
 	return ts.db.GetAllTasks(userID)
 }
 
-func (ts *TaskService) GetTaskByID(taskID string, userID string) (task_models.Task, error) {
+func (ts *TaskService) GetTaskByID(taskID string, userID string) (taskmodels.Task, error) {
 	if taskID == "" {
-		return task_models.Task{}, task_errors.EpmtyStringErr
+		return taskmodels.Task{}, taskerrors.ErrEmptyString
 	}
 
 	task, err := ts.db.GetTaskByID(taskID, userID)
 	if err != nil {
-		return task_models.Task{}, err
+		return taskmodels.Task{}, err
 	}
 
 	return task, nil
 }
 
-func (ts *TaskService) CreateTask(newTaskAttributes task_models.TaskAttributes, userID string) (string, error) {
+func (ts *TaskService) CreateTask(newTaskAttributes taskmodels.TaskAttributes, userID string) (string, error) {
 	err := ts.valid.Struct(newTaskAttributes)
 	if err != nil {
 		return "", err
@@ -54,10 +54,10 @@ func (ts *TaskService) CreateTask(newTaskAttributes task_models.TaskAttributes, 
 	taskStatusValid := newTaskAttributes.Status.IsValid()
 
 	if !taskStatusValid {
-		return "", task_errors.WrongStatusErr
+		return "", taskerrors.ErrWrongStatus
 	}
 
-	var newTask task_models.Task
+	var newTask taskmodels.Task
 
 	newTask.ID = uuid.New().String()
 	newTask.UserID = userID
@@ -71,7 +71,7 @@ func (ts *TaskService) CreateTask(newTaskAttributes task_models.TaskAttributes, 
 	return newTask.ID, nil
 }
 
-func (ts *TaskService) UpdateTask(taskID string, userID string, newAttributes task_models.TaskAttributes) error {
+func (ts *TaskService) UpdateTask(taskID string, userID string, newAttributes taskmodels.TaskAttributes) error {
 	err := ts.valid.Struct(newAttributes)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (ts *TaskService) UpdateTask(taskID string, userID string, newAttributes ta
 	taskStatusValid := newAttributes.Status.IsValid()
 
 	if !taskStatusValid {
-		return task_errors.WrongStatusErr
+		return taskerrors.ErrWrongStatus
 	}
 
 	task, err := ts.db.GetTaskByID(taskID, userID)

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"toDoList/internal"
-	"toDoList/internal/domain/task/task_models"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/task/taskmodels"
+	"toDoList/internal/domain/user/usermodels"
 	auth "toDoList/internal/server/auth/user_auth"
 	"toDoList/internal/server/middleware"
 	"toDoList/internal/server/workers"
@@ -17,19 +17,19 @@ import (
 )
 
 type UserStorage interface {
-	GetAllUsers() ([]user_models.User, error)
-	SaveUser(user user_models.User) (user_models.User, error)
-	GetUserByID(userID string) (user_models.User, error)
-	GetUserByEmail(email string) (user_models.User, error)
-	UpdateUser(user user_models.User) (user_models.User, error)
+	GetAllUsers() ([]usermodels.User, error)
+	SaveUser(user usermodels.User) (usermodels.User, error)
+	GetUserByID(userID string) (usermodels.User, error)
+	GetUserByEmail(email string) (usermodels.User, error)
+	UpdateUser(user usermodels.User) (usermodels.User, error)
 	DeleteUser(userID string) error
 }
 
 type TaskStorage interface {
-	GetAllTasks(userID string) ([]task_models.Task, error)
-	GetTaskByID(taskID string, userID string) (task_models.Task, error)
-	AddTask(newTask task_models.Task) error
-	UpdateTaskAttributes(task task_models.Task) error
+	GetAllTasks(userID string) ([]taskmodels.Task, error)
+	GetTaskByID(taskID string, userID string) (taskmodels.Task, error)
+	AddTask(newTask taskmodels.Task) error
+	UpdateTaskAttributes(task taskmodels.Task) error
 	DeleteTask(taskID string, userID string) error
 	MarkTaskToDelete(taskID string, userID string) error
 	DeleteMarkedTasks() error
@@ -49,35 +49,40 @@ type TokenSigner interface {
 	GetAudience() string
 }
 
-type ToDoListApi struct {
+type ToDoListAPI struct {
 	srv         *http.Server
 	db          Storage
 	tokenSigner TokenSigner
 	taskDeleter *workers.TaskBatchDeleter
 }
 
-func NewServer(cfg internal.Config, db Storage, tokenSigner TokenSigner, taskDeleter *workers.TaskBatchDeleter) *ToDoListApi {
-
-	HttpSrv := http.Server{
-		Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+func NewServer(
+	cfg internal.Config,
+	db Storage,
+	tokenSigner TokenSigner,
+	taskDeleter *workers.TaskBatchDeleter,
+) *ToDoListAPI {
+	HTTPSrv := http.Server{ //nolint:gocritic // Линтеры противоречат друг другу, оставил так
+		Addr:              fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		ReadHeaderTimeout: internal.SecFive,
 	}
 
-	api := ToDoListApi{srv: &HttpSrv, db: db, tokenSigner: tokenSigner, taskDeleter: taskDeleter}
+	api := ToDoListAPI{srv: &HTTPSrv, db: db, tokenSigner: tokenSigner, taskDeleter: taskDeleter}
 
 	api.configRouter()
 
 	return &api
 }
 
-func (api *ToDoListApi) Run() error {
+func (api *ToDoListAPI) Run() error {
 	return api.srv.ListenAndServe()
 }
 
-func (api *ToDoListApi) ShutDown(ctx context.Context) error {
+func (api *ToDoListAPI) ShutDown(ctx context.Context) error {
 	return api.srv.Shutdown(ctx)
 }
 
-func (api *ToDoListApi) configRouter() {
+func (api *ToDoListAPI) configRouter() {
 	router := gin.Default()
 
 	router.Use(middleware.GzipDecompressMiddleware())
