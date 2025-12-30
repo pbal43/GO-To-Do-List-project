@@ -16,7 +16,7 @@ type userStorage struct {
 }
 
 func (us *userStorage) GetAllUsers() ([]usermodels.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	rows, err := us.db.Query(ctx, "SELECT uuid, name, email, password FROM users")
@@ -40,7 +40,7 @@ func (us *userStorage) GetAllUsers() ([]usermodels.User, error) {
 }
 
 func (us *userStorage) GetUserByID(userID string) (usermodels.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	var user usermodels.User
@@ -57,7 +57,7 @@ func (us *userStorage) GetUserByID(userID string) (usermodels.User, error) {
 }
 
 func (us *userStorage) GetUserByEmail(email string) (usermodels.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	var user usermodels.User
@@ -74,7 +74,7 @@ func (us *userStorage) GetUserByEmail(email string) (usermodels.User, error) {
 }
 
 func (us *userStorage) SaveUser(user usermodels.User) (usermodels.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	_, err := us.db.Exec(ctx, "INSERT INTO users (uuid, name, email, password) VALUES ($1, $2, $3, $4)",
@@ -92,7 +92,7 @@ func (us *userStorage) SaveUser(user usermodels.User) (usermodels.User, error) {
 }
 
 func (us *userStorage) UpdateUser(user usermodels.User) (usermodels.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	cmd, err := us.db.Exec(ctx, "UPDATE users SET name = $1, email = $2, password = $3 WHERE uuid = $4",
@@ -110,7 +110,7 @@ func (us *userStorage) UpdateUser(user usermodels.User) (usermodels.User, error)
 }
 
 func (us *userStorage) DeleteUser(userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	cmd, err := us.db.Exec(ctx, "DELETE FROM users WHERE uuid = $1", userID)

@@ -54,7 +54,7 @@ func NewTaskBatchDeleter(ctx context.Context, storage Storage, capacity int, log
 }
 
 func (t *TaskBatchDeleter) Start() {
-	ticker := time.NewTicker(internal.TwoSec)
+	ticker := time.NewTicker(internal.SecTwo)
 	defer ticker.Stop()
 
 	for {

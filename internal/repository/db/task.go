@@ -17,7 +17,7 @@ type taskStorage struct {
 }
 
 func (ts *taskStorage) GetAllTasks(userID string) ([]taskmodels.Task, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 	rows, err := ts.db.Query(
 		ctx,
@@ -52,7 +52,7 @@ func (ts *taskStorage) GetAllTasks(userID string) ([]taskmodels.Task, error) {
 }
 
 func (ts *taskStorage) GetTaskByID(taskID string, userID string) (taskmodels.Task, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	var task taskmodels.Task
@@ -76,7 +76,7 @@ func (ts *taskStorage) GetTaskByID(taskID string, userID string) (taskmodels.Tas
 }
 
 func (ts *taskStorage) AddTask(newTask taskmodels.Task) error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	_, err := ts.db.Exec(
@@ -101,7 +101,7 @@ func (ts *taskStorage) AddTask(newTask taskmodels.Task) error {
 }
 
 func (ts *taskStorage) UpdateTaskAttributes(task taskmodels.Task) error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	cmd, err := ts.db.Exec(
@@ -125,7 +125,7 @@ func (ts *taskStorage) UpdateTaskAttributes(task taskmodels.Task) error {
 }
 
 func (ts *taskStorage) DeleteTask(taskID string, userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	cmd, err := ts.db.Exec(ctx, "DELETE FROM tasks WHERE id = $1 AND userid = $2", taskID, userID)
@@ -142,7 +142,7 @@ func (ts *taskStorage) DeleteTask(taskID string, userID string) error {
 }
 
 func (ts *taskStorage) MarkTaskToDelete(taskID string, userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	cmd, err := ts.db.Exec(
@@ -164,7 +164,7 @@ func (ts *taskStorage) MarkTaskToDelete(taskID string, userID string) error {
 }
 
 func (ts *taskStorage) DeleteMarkedTasks() error {
-	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.SecFive)
 	defer cancel()
 
 	tx, err := ts.db.Begin(ctx)
