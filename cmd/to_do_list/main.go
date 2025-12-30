@@ -62,7 +62,7 @@ func main() {
 		Issuer:     "todolistService",
 		Audience:   "todolistClient",
 		AccessTTL:  internal.MinFifteen,
-		RefreshTTL: internal.OneWeek,
+		RefreshTTL: internal.WeekOne,
 	}
 
 	srv := server.NewServer(cfg, database, signer, taskDeleter)

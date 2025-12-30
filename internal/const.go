@@ -4,7 +4,7 @@ import "time"
 
 const (
 	MinFifteen            = 15 * time.Minute
-	OneWeek               = 24 * 7 * time.Hour
+	WeekOne               = 24 * 7 * time.Hour
 	SecTen                = 10 * time.Second
 	SecFive               = 5 * time.Second
 	MinOne                = 60 * time.Second
