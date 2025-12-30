@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib" //
+	"github.com/rs/zerolog/log"
 )
 
 type Storage struct {
@@ -17,7 +17,7 @@ type Storage struct {
 	taskStorage
 }
 
-// PgxIface общий интерфейс для мока/адаптера
+// PgxIface - общий интерфейс для мока/адаптера.
 type PgxIface interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
@@ -26,7 +26,7 @@ type PgxIface interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-// Адаптер для *pgx.Conn
+// pgxConnAdapter - адаптер для *pgx.Conn.
 type pgxConnAdapter struct {
 	*pgx.Conn
 }
@@ -66,7 +66,6 @@ func (s *Storage) Close(ctx context.Context) error {
 }
 
 func Migrations(dsn string, migratePath string) error {
-
 	mPath := fmt.Sprintf("file://%s", migratePath)
 	m, err := migrate.New(mPath, dsn)
 
@@ -74,14 +73,14 @@ func Migrations(dsn string, migratePath string) error {
 		return err
 	}
 
-	if err := m.Up(); err != nil {
+	if err = m.Up(); err != nil {
 		if !errors.Is(err, migrate.ErrNoChange) {
 			return err
 		}
-		log.Println("DB is already up to date")
+		log.Printf("DB is already up to date")
 	}
 
-	log.Println("Migration complete")
+	log.Printf("Migration complete")
 
 	return nil
 }

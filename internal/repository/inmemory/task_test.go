@@ -2,8 +2,8 @@ package inmemory
 
 import (
 	"testing"
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -11,9 +11,9 @@ import (
 func TestStorage_Tasks(t *testing.T) {
 	storage := NewInMemoryStorage()
 
-	task1 := task_models.Task{
+	task1 := taskmodels.Task{
 		ID: "task1",
-		Attributes: task_models.TaskAttributes{
+		Attributes: taskmodels.TaskAttributes{
 			Title:       "Task 1",
 			Description: "First task",
 			Status:      "New",
@@ -42,8 +42,8 @@ func TestStorage_Tasks(t *testing.T) {
 			action: func() error {
 				return storage.AddTask(task1)
 			},
-			check:       func(t *testing.T) {},
-			expectError: task_errors.ErrorTaskIsAlreadyExist,
+			check:       func(_ *testing.T) {},
+			expectError: taskerrors.ErrTaskIsAlreadyExist,
 		},
 		{
 			name: "GetAllTasks_success",
@@ -64,8 +64,8 @@ func TestStorage_Tasks(t *testing.T) {
 				_, err := storage.GetAllTasks("unknown")
 				return err
 			},
-			check:       func(t *testing.T) {},
-			expectError: task_errors.FoundNothingErr,
+			check:       func(_ *testing.T) {},
+			expectError: taskerrors.ErrFoundNothing,
 		},
 		{
 			name: "GetTaskByID_success",
@@ -85,8 +85,8 @@ func TestStorage_Tasks(t *testing.T) {
 				_, err := storage.GetTaskByID("task404", "user1")
 				return err
 			},
-			check:       func(t *testing.T) {},
-			expectError: task_errors.FoundNothingErr,
+			check:       func(_ *testing.T) {},
+			expectError: taskerrors.ErrFoundNothing,
 		},
 		{
 			name: "UpdateTaskAttributes_success",
@@ -96,18 +96,18 @@ func TestStorage_Tasks(t *testing.T) {
 			},
 			check: func(t *testing.T) {
 				task, _ := storage.GetTaskByID("task1", "user1")
-				assert.Equal(t, task_models.TaskStatus("Done"), task.Attributes.Status)
+				assert.Equal(t, taskmodels.TaskStatus("Done"), task.Attributes.Status)
 			},
 			expectError: nil,
 		},
 		{
 			name: "UpdateTaskAttributes_not_found",
 			action: func() error {
-				task := task_models.Task{ID: "unknown"}
+				task := taskmodels.Task{ID: "unknown"}
 				return storage.UpdateTaskAttributes(task)
 			},
-			check:       func(t *testing.T) {},
-			expectError: task_errors.FoundNothingErr,
+			check:       func(_ *testing.T) {},
+			expectError: taskerrors.ErrFoundNothing,
 		},
 		{
 			name: "DeleteTask_success",
@@ -116,7 +116,7 @@ func TestStorage_Tasks(t *testing.T) {
 			},
 			check: func(t *testing.T) {
 				_, err := storage.GetTaskByID("task1", "user1")
-				assert.ErrorIs(t, err, task_errors.FoundNothingErr)
+				assert.ErrorIs(t, err, taskerrors.ErrFoundNothing)
 			},
 			expectError: nil,
 		},
@@ -125,15 +125,15 @@ func TestStorage_Tasks(t *testing.T) {
 			action: func() error {
 				return storage.DeleteTask("task404", "user1")
 			},
-			check:       func(t *testing.T) {},
-			expectError: task_errors.FoundNothingErr,
+			check:       func(_ *testing.T) {},
+			expectError: taskerrors.ErrFoundNothing,
 		},
 		{
 			name: "MarkTaskToDelete",
 			action: func() error {
 				return storage.MarkTaskToDelete("task2", "user2")
 			},
-			check:       func(t *testing.T) {},
+			check:       func(_ *testing.T) {},
 			expectError: nil,
 		},
 		{
@@ -141,7 +141,7 @@ func TestStorage_Tasks(t *testing.T) {
 			action: func() error {
 				return storage.DeleteMarkedTasks()
 			},
-			check:       func(t *testing.T) {},
+			check:       func(_ *testing.T) {},
 			expectError: nil,
 		},
 	}

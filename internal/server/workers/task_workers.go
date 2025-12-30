@@ -3,27 +3,28 @@ package workers
 import (
 	"context"
 	"time"
-	"toDoList/internal/domain/task/task_models"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal"
+	"toDoList/internal/domain/task/taskmodels"
+	"toDoList/internal/domain/user/usermodels"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 type UserStorage interface {
-	GetAllUsers() ([]user_models.User, error)
-	SaveUser(user user_models.User) (user_models.User, error)
-	GetUserByID(userID string) (user_models.User, error)
-	GetUserByEmail(email string) (user_models.User, error)
-	UpdateUser(user user_models.User) (user_models.User, error)
+	GetAllUsers() ([]usermodels.User, error)
+	SaveUser(user usermodels.User) (usermodels.User, error)
+	GetUserByID(userID string) (usermodels.User, error)
+	GetUserByEmail(email string) (usermodels.User, error)
+	UpdateUser(user usermodels.User) (usermodels.User, error)
 	DeleteUser(userID string) error
 }
 
 type TaskStorage interface {
-	GetAllTasks(userID string) ([]task_models.Task, error)
-	GetTaskByID(taskID string, userID string) (task_models.Task, error)
-	AddTask(newTask task_models.Task) error
-	UpdateTaskAttributes(task task_models.Task) error
+	GetAllTasks(userID string) ([]taskmodels.Task, error)
+	GetTaskByID(taskID string, userID string) (taskmodels.Task, error)
+	AddTask(newTask taskmodels.Task) error
+	UpdateTaskAttributes(task taskmodels.Task) error
 	DeleteTask(taskID string, userID string) error
 	MarkTaskToDelete(taskID string, userID string) error
 	DeleteMarkedTasks() error
@@ -42,7 +43,7 @@ type TaskBatchDeleter struct {
 	log      zerolog.Logger
 }
 
-func NewTaskBatchDeleter(storage Storage, ctx context.Context, capacity int, log zerolog.Logger) *TaskBatchDeleter {
+func NewTaskBatchDeleter(ctx context.Context, storage Storage, capacity int, log zerolog.Logger) *TaskBatchDeleter {
 	return &TaskBatchDeleter{
 		storage:  storage,
 		taskChan: make(chan struct{}, capacity),
@@ -53,7 +54,7 @@ func NewTaskBatchDeleter(storage Storage, ctx context.Context, capacity int, log
 }
 
 func (t *TaskBatchDeleter) Start() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(internal.TwoSec)
 	defer ticker.Stop()
 
 	for {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"toDoList/internal/domain/user/user_errors"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/user/usererrors"
+	"toDoList/internal/domain/user/usermodels"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,20 +13,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Мок для QueryRow
+// mockRow - мок для QueryRow.
 type mockRow struct {
 	err error
 }
 
+//nolint:revive // Это мок
 func (r *mockRow) Scan(dest ...any) error {
 	return r.err
 }
 
-// Мок для PgxIface
+// mockDB - мок для PgxIface.
 type mockDB struct {
 	shouldDuplicate bool
 }
 
+//nolint:revive // Это мок
 func (m *mockDB) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
 	if m.shouldDuplicate {
 		return pgconn.NewCommandTag("INSERT"), &pgconn.PgError{
@@ -37,20 +39,24 @@ func (m *mockDB) Exec(ctx context.Context, sql string, args ...any) (pgconn.Comm
 	return pgconn.NewCommandTag("INSERT"), nil
 }
 
+//nolint:revive // Это мок
 func (m *mockDB) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	return nil, errors.New("Query not implemented in mock")
 }
 
+//nolint:revive // Это мок
 func (m *mockDB) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	return &mockRow{err: errors.New("QueryRow not implemented in mock")}
 }
 
+//nolint:revive // Это мок
 func (m *mockDB) Close(ctx context.Context) error {
 	return nil
 }
 
+//nolint:revive // Это мок
 func (m *mockDB) Begin(ctx context.Context) (pgx.Tx, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil // Это мок
 }
 
 func TestUserStorage_GetAllUsers(t *testing.T) {
@@ -114,16 +120,17 @@ func TestUserStorage_GetUserByID(t *testing.T) {
 		wantName string
 	}{
 		{
-			name:     "user exists",
-			userID:   "1",
-			mockRows: pgxmock.NewRows([]string{"uuid", "name", "email", "password"}).AddRow("1", "Alice", "a@test.com", "p1"),
+			name:   "user exists",
+			userID: "1",
+			mockRows: pgxmock.NewRows([]string{"uuid", "name", "email", "password"}).
+				AddRow("1", "Alice", "a@test.com", "p1"),
 			wantName: "Alice",
 		},
 		{
 			name:    "user not found",
 			userID:  "404",
 			mockErr: pgx.ErrNoRows,
-			wantErr: user_errors.ErrorUserNotExist,
+			wantErr: usererrors.ErrUserNotExist,
 		},
 	}
 
@@ -134,7 +141,9 @@ func TestUserStorage_GetUserByID(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE uuid = \\$1").WithArgs(tt.userID).WillReturnError(tt.mockErr)
+				mock.ExpectQuery("SELECT \\* FROM users WHERE uuid = \\$1").
+					WithArgs(tt.userID).
+					WillReturnError(tt.mockErr)
 			} else {
 				mock.ExpectQuery("SELECT \\* FROM users WHERE uuid = \\$1").WithArgs(tt.userID).WillReturnRows(tt.mockRows)
 			}
@@ -162,16 +171,17 @@ func TestUserStorage_GetUserByEmail(t *testing.T) {
 		wantName string
 	}{
 		{
-			name:     "user exists",
-			email:    "a@test.com",
-			mockRows: pgxmock.NewRows([]string{"uuid", "name", "email", "password"}).AddRow("1", "Alice", "a@test.com", "p1"),
+			name:  "user exists",
+			email: "a@test.com",
+			mockRows: pgxmock.NewRows([]string{"uuid", "name", "email", "password"}).
+				AddRow("1", "Alice", "a@test.com", "p1"),
 			wantName: "Alice",
 		},
 		{
 			name:    "user not found",
 			email:   "missing@test.com",
 			mockErr: pgx.ErrNoRows,
-			wantErr: user_errors.ErrorUserNotExist,
+			wantErr: usererrors.ErrUserNotExist,
 		},
 	}
 
@@ -182,7 +192,9 @@ func TestUserStorage_GetUserByEmail(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\$1").WithArgs(tt.email).WillReturnError(tt.mockErr)
+				mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\$1").
+					WithArgs(tt.email).
+					WillReturnError(tt.mockErr)
 			} else {
 				mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\$1").WithArgs(tt.email).WillReturnRows(tt.mockRows)
 			}
@@ -203,19 +215,29 @@ func TestUserStorage_GetUserByEmail(t *testing.T) {
 func TestUserStorage_SaveUser(t *testing.T) {
 	tests := []struct {
 		name            string
-		user            user_models.User
+		user            usermodels.User
 		shouldDuplicate bool
 		wantErr         error
 	}{
 		{
 			name: "success",
-			user: user_models.User{"1", "Alice", "a@test.com", "p1"},
+			user: usermodels.User{
+				UUID:     "1",
+				Name:     "Alice",
+				Email:    "a@test.com",
+				Password: "p1",
+			},
 		},
 		{
-			name:            "duplicate",
-			user:            user_models.User{"dup", "Bob", "b@test.com", "p2"},
+			name: "duplicate",
+			user: usermodels.User{
+				UUID:     "dup",
+				Name:     "Bob",
+				Email:    "b@test.com",
+				Password: "p2",
+			},
 			shouldDuplicate: true,
-			wantErr:         user_errors.ErrorUserIsAlreadyExist,
+			wantErr:         usererrors.ErrUserIsAlreadyExist,
 		},
 	}
 
@@ -236,20 +258,30 @@ func TestUserStorage_SaveUser(t *testing.T) {
 func TestUserStorage_UpdateUser(t *testing.T) {
 	tests := []struct {
 		name         string
-		user         user_models.User
+		user         usermodels.User
 		rowsAffected int
 		wantErr      error
 	}{
 		{
-			name:         "success",
-			user:         user_models.User{"1", "Alice", "a@test.com", "p1"},
+			name: "success",
+			user: usermodels.User{
+				UUID:     "1",
+				Name:     "Alice",
+				Email:    "a@test.com",
+				Password: "p1",
+			},
 			rowsAffected: 1,
 		},
 		{
-			name:         "not found",
-			user:         user_models.User{"404", "Bob", "b@test.com", "p2"},
+			name: "not found",
+			user: usermodels.User{
+				UUID:     "404",
+				Name:     "Bob",
+				Email:    "b@test.com",
+				Password: "p2",
+			},
 			rowsAffected: 0,
-			wantErr:      user_errors.ErrorUserNotFound,
+			wantErr:      usererrors.ErrUserNotFound,
 		},
 	}
 
@@ -260,7 +292,7 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			mock.ExpectExec("UPDATE users").
-				WithArgs(tt.user.Name, tt.user.Email, tt.user.Password, tt.user.Uuid).
+				WithArgs(tt.user.Name, tt.user.Email, tt.user.Password, tt.user.UUID).
 				WillReturnResult(pgxmock.NewResult("UPDATE", int64(tt.rowsAffected)))
 
 			_, err = us.UpdateUser(tt.user)
@@ -291,7 +323,7 @@ func TestUserStorage_DeleteUser(t *testing.T) {
 			name:         "not found",
 			userID:       "404",
 			rowsAffected: 0,
-			wantErr:      user_errors.ErrorUserNotFound,
+			wantErr:      usererrors.ErrUserNotFound,
 		},
 	}
 
