@@ -691,7 +691,7 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func BenchmarkRegister(b *testing.B) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.POST("/register", srv.register)
@@ -701,8 +701,8 @@ func BenchmarkRegister(b *testing.B) {
 	repo := mocks.NewStorage(b)
 
 	repo.On("SaveUser", mock.Anything).Return(
-		user_models.User{
-			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+		usermodels.User{
+			UUID:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
 			Name:     "pere",
 			Email:    "pbsal@yaoo.com",
 			Password: "unmarshall me",
@@ -715,13 +715,13 @@ func BenchmarkRegister(b *testing.B) {
 	req.Method = http.MethodPost
 	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = req.Send()
 	}
 }
 
 func BenchmarkLogin(b *testing.B) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.POST("/login", srv.login)
@@ -734,8 +734,8 @@ func BenchmarkLogin(b *testing.B) {
 
 	repo := mocks.NewStorage(b)
 	repo.On("GetUserByEmail", mock.Anything).Return(
-		user_models.User{
-			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+		usermodels.User{
+			UUID:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
 			Name:     "pere",
 			Email:    "pbsal@yaoo.com",
 			Password: string(testPassHash)},
@@ -757,13 +757,13 @@ func BenchmarkLogin(b *testing.B) {
 	req.Method = http.MethodPost
 	req.Body = fmt.Sprintf(`{"email":"pbsal@yaoo.com","password":"%s"}`, testPass)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = req.Send()
 	}
 }
 
 func BenchmarkUpdateUser(b *testing.B) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -781,15 +781,15 @@ func BenchmarkUpdateUser(b *testing.B) {
 
 	repo := mocks.NewStorage(b)
 	repo.On("GetUserByID", "testID").Return(
-		user_models.User{
-			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+		usermodels.User{
+			UUID:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
 			Name:     "pere",
 			Email:    "pbsal@yaoo.com",
 			Password: "unmarshall me"},
 		nil)
 	repo.On("UpdateUser", mock.Anything).Return(
-		user_models.User{
-			Uuid:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
+		usermodels.User{
+			UUID:     "2246b7cc-4afa-4e31-abc9-24f8c95692f1",
 			Name:     "pere",
 			Email:    "pbsal@yaoo.com",
 			Password: "unmarshall me"},
@@ -801,13 +801,13 @@ func BenchmarkUpdateUser(b *testing.B) {
 	req.Method = http.MethodPut
 	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = req.Send()
 	}
 }
 
 func BenchmarkDeleteUser(b *testing.B) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -833,7 +833,7 @@ func BenchmarkDeleteUser(b *testing.B) {
 	req.Method = http.MethodDelete
 	req.Body = `{"name":"pere","email":"pbsal@yaoo.com","password":"unmarshall me"}`
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = req.Send()
 	}
 }
