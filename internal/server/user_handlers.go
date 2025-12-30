@@ -105,8 +105,8 @@ func (srv *ToDoListApi) login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetCookie("access_token", access, 3600*24, "/", "127.0.0.1:8080", false, true)
-	ctx.SetCookie("refresh_token", refresh, 3600*24*7, "/", "127.0.0.1:8080", false, true)
+	ctx.SetCookie("access_token", access, 3600*24, "/", "127.0.0.1", false, true)
+	ctx.SetCookie("refresh_token", refresh, 3600*24*7, "/", "127.0.0.1", false, true)
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Login successful"})
 }
 
