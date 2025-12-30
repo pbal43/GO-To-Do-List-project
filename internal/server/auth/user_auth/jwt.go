@@ -9,9 +9,12 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
+
+	UserID string `json:"user_id"`
 }
+
+const jtiSize = 16
 
 type HS256Signer struct {
 	Secret     []byte
@@ -22,7 +25,7 @@ type HS256Signer struct {
 }
 
 func generateJti() string {
-	b := make([]byte, 16)
+	b := make([]byte, jtiSize)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }

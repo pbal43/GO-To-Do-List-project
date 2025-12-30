@@ -1,10 +1,9 @@
-package user_service
+package userservice
 
 import (
-	"fmt"
 	"testing"
-	"toDoList/internal/domain/user/user_errors"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/user/usererrors"
+	"toDoList/internal/domain/user/usermodels"
 	"toDoList/internal/server/mocks"
 
 	"github.com/go-playground/validator/v10"
@@ -14,15 +13,14 @@ import (
 )
 
 func TestGetAllUsers(t *testing.T) {
-
 	type want struct {
-		usersData []user_models.User
+		usersData []usermodels.User
 		err       error
 	}
 
 	type test struct {
 		name        string
-		dataFromDB  []user_models.User
+		dataFromDB  []usermodels.User
 		errorFromDB error
 		want        want
 	}
@@ -30,15 +28,15 @@ func TestGetAllUsers(t *testing.T) {
 	tests := []test{
 		{
 			name: "success",
-			dataFromDB: []user_models.User{
+			dataFromDB: []usermodels.User{
 				{
-					Uuid:     "1",
+					UUID:     "1",
 					Name:     "John Doe",
 					Email:    "test",
 					Password: "password",
 				},
 				{
-					Uuid:     "2",
+					UUID:     "2",
 					Name:     "John Doe",
 					Email:    "test",
 					Password: "password",
@@ -46,14 +44,14 @@ func TestGetAllUsers(t *testing.T) {
 			},
 			errorFromDB: nil,
 			want: want{
-				usersData: []user_models.User{{
-					Uuid:     "1",
+				usersData: []usermodels.User{{
+					UUID:     "1",
 					Name:     "John Doe",
 					Email:    "test",
 					Password: "password",
 				},
 					{
-						Uuid:     "2",
+						UUID:     "2",
 						Name:     "John Doe",
 						Email:    "test",
 						Password: "password",
@@ -64,11 +62,11 @@ func TestGetAllUsers(t *testing.T) {
 		},
 		{
 			name:        "error",
-			dataFromDB:  []user_models.User{},
-			errorFromDB: fmt.Errorf("can't get all users data"),
+			dataFromDB:  []usermodels.User{},
+			errorFromDB: usererrors.ErrGetAllUsersData,
 			want: want{
-				usersData: []user_models.User{},
-				err:       fmt.Errorf("can't get all users data"),
+				usersData: []usermodels.User{},
+				err:       usererrors.ErrGetAllUsersData,
 			},
 		},
 	}
@@ -89,14 +87,14 @@ func TestGetAllUsers(t *testing.T) {
 
 func TestGetUserById(t *testing.T) {
 	type want struct {
-		usersData user_models.User
+		usersData usermodels.User
 		err       error
 	}
 
 	type test struct {
 		name        string
-		userId      string
-		dataFromDB  user_models.User
+		userID      string
+		dataFromDB  usermodels.User
 		errorFromDB error
 		dbMock      bool
 		want        want
@@ -105,9 +103,9 @@ func TestGetUserById(t *testing.T) {
 	tests := []test{
 		{
 			name:   "success",
-			userId: "1",
-			dataFromDB: user_models.User{
-				Uuid:     "1",
+			userID: "1",
+			dataFromDB: usermodels.User{
+				UUID:     "1",
 				Name:     "John Doe",
 				Email:    "test",
 				Password: "password",
@@ -115,8 +113,8 @@ func TestGetUserById(t *testing.T) {
 			errorFromDB: nil,
 			dbMock:      true,
 			want: want{
-				usersData: user_models.User{
-					Uuid:     "1",
+				usersData: usermodels.User{
+					UUID:     "1",
 					Name:     "John Doe",
 					Email:    "test",
 					Password: "password",
@@ -126,22 +124,22 @@ func TestGetUserById(t *testing.T) {
 		},
 		{
 			name:   "fail: userID is empty string",
-			userId: "",
+			userID: "",
 			dbMock: false,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorUserEmptyInsert,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrUserEmptyInsert,
 			},
 		},
 		{
 			name:        "err from database",
-			userId:      "1",
-			dataFromDB:  user_models.User{},
-			errorFromDB: user_errors.ErrorUserNotExist,
+			userID:      "1",
+			dataFromDB:  usermodels.User{},
+			errorFromDB: usererrors.ErrUserNotExist,
 			dbMock:      true,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorUserNotExist,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrUserNotExist,
 			},
 		},
 	}
@@ -152,10 +150,10 @@ func TestGetUserById(t *testing.T) {
 			newService := NewUserService(repo)
 
 			if tc.dbMock {
-				repo.On("GetUserByID", tc.userId).Return(tc.dataFromDB, tc.errorFromDB)
+				repo.On("GetUserByID", tc.userID).Return(tc.dataFromDB, tc.errorFromDB)
 			}
 
-			users, err := newService.GetUserByID(tc.userId)
+			users, err := newService.GetUserByID(tc.userID)
 
 			assert.Equal(t, tc.want.usersData, users)
 			assert.Equal(t, tc.want.err, err)
@@ -165,14 +163,14 @@ func TestGetUserById(t *testing.T) {
 
 func TestSaveUser(t *testing.T) {
 	type want struct {
-		usersData user_models.User
+		usersData usermodels.User
 		err       error
 	}
 
 	type test struct {
 		name        string
-		UserRequest user_models.UserRequest
-		dataFromDB  user_models.User
+		UserRequest usermodels.UserRequest
+		dataFromDB  usermodels.User
 		errorFromDB error
 		validErr    bool
 		dbMock      bool
@@ -182,13 +180,13 @@ func TestSaveUser(t *testing.T) {
 	tests := []test{
 		{
 			name: "success",
-			UserRequest: user_models.UserRequest{
+			UserRequest: usermodels.UserRequest{
 				Name:     "John Doe",
 				Email:    "test@test.ru",
 				Password: "password123!",
 			},
-			dataFromDB: user_models.User{
-				Uuid:     "1",
+			dataFromDB: usermodels.User{
+				UUID:     "1",
 				Name:     "John Doe",
 				Email:    "test",
 				Password: "password",
@@ -196,7 +194,7 @@ func TestSaveUser(t *testing.T) {
 			errorFromDB: nil,
 			dbMock:      true,
 			want: want{
-				usersData: user_models.User{
+				usersData: usermodels.User{
 					Name:     "John Doe",
 					Email:    "test",
 					Password: "password",
@@ -206,7 +204,7 @@ func TestSaveUser(t *testing.T) {
 		},
 		{
 			name: "error not valid user request data",
-			UserRequest: user_models.UserRequest{
+			UserRequest: usermodels.UserRequest{
 				Name:     "John Doe",
 				Email:    "test",
 				Password: "password123!",
@@ -214,7 +212,7 @@ func TestSaveUser(t *testing.T) {
 			dbMock:   false,
 			validErr: true,
 			want: want{
-				usersData: user_models.User{},
+				usersData: usermodels.User{},
 				err:       nil,
 			},
 		},
@@ -246,14 +244,14 @@ func TestSaveUser(t *testing.T) {
 
 func TestLoginUser(t *testing.T) {
 	type want struct {
-		usersData user_models.User
+		usersData usermodels.User
 		err       error
 	}
 
 	type test struct {
 		name             string
-		UserLoginRequest user_models.UserLoginRequest
-		dataFromDB       user_models.User
+		UserLoginRequest usermodels.UserLoginRequest
+		dataFromDB       usermodels.User
 		errorFromDB      error
 		dbMock           bool
 		needPwdHash      bool
@@ -264,12 +262,12 @@ func TestLoginUser(t *testing.T) {
 	tests := []test{
 		{
 			name: "success",
-			UserLoginRequest: user_models.UserLoginRequest{
+			UserLoginRequest: usermodels.UserLoginRequest{
 				Email:    "test@test.ru",
 				Password: "password123!",
 			},
-			dataFromDB: user_models.User{
-				Uuid:     "1",
+			dataFromDB: usermodels.User{
+				UUID:     "1",
 				Name:     "John Doe",
 				Email:    "test@test.ru",
 				Password: "password123!",
@@ -278,8 +276,8 @@ func TestLoginUser(t *testing.T) {
 			dbMock:      true,
 			needPwdHash: true,
 			want: want{
-				usersData: user_models.User{
-					Uuid:     "1",
+				usersData: usermodels.User{
+					UUID:     "1",
 					Name:     "John Doe",
 					Email:    "test@test.ru",
 					Password: "password123!",
@@ -289,27 +287,27 @@ func TestLoginUser(t *testing.T) {
 		},
 		{
 			name: "error from db",
-			UserLoginRequest: user_models.UserLoginRequest{
+			UserLoginRequest: usermodels.UserLoginRequest{
 				Email:    "test@test.ru",
 				Password: "password123!",
 			},
-			dataFromDB:  user_models.User{},
-			errorFromDB: user_errors.ErrorUserNotExist,
+			dataFromDB:  usermodels.User{},
+			errorFromDB: usererrors.ErrUserNotExist,
 			dbMock:      true,
 			needPwdHash: false,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorUserNotExist,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrUserNotExist,
 			},
 		},
 		{
 			name: "fail: wrong password",
-			UserLoginRequest: user_models.UserLoginRequest{
+			UserLoginRequest: usermodels.UserLoginRequest{
 				Email:    "test@test.ru",
 				Password: "wrongPassword123!",
 			},
-			dataFromDB: user_models.User{
-				Uuid:     "1",
+			dataFromDB: usermodels.User{
+				UUID:     "1",
 				Name:     "John Doe",
 				Email:    "test@test.ru",
 				Password: "password123!",
@@ -319,8 +317,8 @@ func TestLoginUser(t *testing.T) {
 			needPwdHash:  true,
 			needPwdClean: true,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorInvalidPassword,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrInvalidPassword,
 			},
 		},
 	}
@@ -354,17 +352,17 @@ func TestLoginUser(t *testing.T) {
 
 func TestUpdateUser(t *testing.T) {
 	type want struct {
-		usersData user_models.User
+		usersData usermodels.User
 		err       error
 	}
 
 	type test struct {
 		name              string
 		userID            string
-		userRequest       user_models.UserRequest
-		dataFromDBGet     user_models.User
+		userRequest       usermodels.UserRequest
+		dataFromDBGet     usermodels.User
 		errorFromDBGet    error
-		dataFromDBUpdate  user_models.User
+		dataFromDBUpdate  usermodels.User
 		errorFromDBUpdate error
 		dbMockGet         bool
 		dbMockUpdate      bool
@@ -376,20 +374,20 @@ func TestUpdateUser(t *testing.T) {
 		{
 			name:   "success",
 			userID: "lalala",
-			userRequest: user_models.UserRequest{
+			userRequest: usermodels.UserRequest{
 				Name:     "Petro",
 				Email:    "petr@petr.ru",
 				Password: "password123!",
 			},
-			dataFromDBGet: user_models.User{
-				Uuid:     "lalala",
+			dataFromDBGet: usermodels.User{
+				UUID:     "lalala",
 				Name:     "John Doe",
 				Email:    "john@john.com",
 				Password: "oldpassword123!",
 			},
 			errorFromDBGet: nil,
-			dataFromDBUpdate: user_models.User{
-				Uuid:     "lalala",
+			dataFromDBUpdate: usermodels.User{
+				UUID:     "lalala",
 				Name:     "John Doe",
 				Email:    "petr@petr.ru",
 				Password: "password123!",
@@ -398,8 +396,8 @@ func TestUpdateUser(t *testing.T) {
 			dbMockGet:         true,
 			dbMockUpdate:      true,
 			want: want{
-				usersData: user_models.User{
-					Uuid:     "lalala",
+				usersData: usermodels.User{
+					UUID:     "lalala",
 					Name:     "John Doe",
 					Email:    "petr@petr.ru",
 					Password: "password123!",
@@ -410,7 +408,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			name:   "fail: validation error",
 			userID: "lalala",
-			userRequest: user_models.UserRequest{
+			userRequest: usermodels.UserRequest{
 				Name:     "Petro",
 				Email:    "petr@petr.ru",
 				Password: "passw",
@@ -420,53 +418,53 @@ func TestUpdateUser(t *testing.T) {
 			dbMockUpdate:      false,
 			validErr:          true,
 			want: want{
-				usersData: user_models.User{},
+				usersData: usermodels.User{},
 				err:       nil,
 			},
 		},
 		{
 			name:   "fail: get db error",
 			userID: "lalala",
-			userRequest: user_models.UserRequest{
+			userRequest: usermodels.UserRequest{
 				Name:     "Petro",
 				Email:    "petr@petr.ru",
 				Password: "password123!",
 			},
-			dataFromDBGet: user_models.User{
-				Uuid:     "lalala",
+			dataFromDBGet: usermodels.User{
+				UUID:     "lalala",
 				Name:     "John Doe",
 				Email:    "john@john.com",
 				Password: "oldpassword123!",
 			},
-			errorFromDBGet: user_errors.ErrorUserNotExist,
+			errorFromDBGet: usererrors.ErrUserNotExist,
 			dbMockGet:      true,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorUserNotExist,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrUserNotExist,
 			},
 		},
 		{
 			name:   "fail: update db error",
 			userID: "lalala",
-			userRequest: user_models.UserRequest{
+			userRequest: usermodels.UserRequest{
 				Name:     "Petro",
 				Email:    "petr@petr.ru",
 				Password: "password123!",
 			},
-			dataFromDBGet: user_models.User{
-				Uuid:     "lalala",
+			dataFromDBGet: usermodels.User{
+				UUID:     "lalala",
 				Name:     "John Doe",
 				Email:    "john@john.com",
 				Password: "oldpassword123!",
 			},
 			errorFromDBGet:    nil,
-			dataFromDBUpdate:  user_models.User{},
-			errorFromDBUpdate: user_errors.ErrorUserNotFound,
+			dataFromDBUpdate:  usermodels.User{},
+			errorFromDBUpdate: usererrors.ErrUserNotFound,
 			dbMockGet:         true,
 			dbMockUpdate:      true,
 			want: want{
-				usersData: user_models.User{},
-				err:       user_errors.ErrorUserNotFound,
+				usersData: usermodels.User{},
+				err:       usererrors.ErrUserNotFound,
 			},
 		},
 	}
@@ -521,9 +519,9 @@ func TestDeleteUser(t *testing.T) {
 		{
 			name:        "fail: db error",
 			userID:      "lalala",
-			errorFromDB: user_errors.ErrorUserNotFound,
+			errorFromDB: usererrors.ErrUserNotFound,
 			want: want{
-				err: user_errors.ErrorUserNotFound,
+				err: usererrors.ErrUserNotFound,
 			},
 		},
 	}

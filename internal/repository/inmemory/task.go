@@ -1,16 +1,16 @@
 package inmemory
 
 import (
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 )
 
-func (storage *Storage) GetAllTasks(userID string) ([]task_models.Task, error) {
+func (storage *Storage) GetAllTasks(userID string) ([]taskmodels.Task, error) {
 	if len(storage.tasks) == 0 {
-		return []task_models.Task{}, task_errors.FoundNothingErr
+		return []taskmodels.Task{}, taskerrors.ErrFoundNothing
 	}
 
-	var tasks []task_models.Task
+	var tasks []taskmodels.Task
 
 	for _, userTasks := range storage.tasks {
 		if userTasks.UserID == userID {
@@ -19,17 +19,17 @@ func (storage *Storage) GetAllTasks(userID string) ([]task_models.Task, error) {
 	}
 
 	if len(tasks) == 0 {
-		return []task_models.Task{}, task_errors.FoundNothingErr
+		return []taskmodels.Task{}, taskerrors.ErrFoundNothing
 	}
 
 	return tasks, nil
 }
-func (storage *Storage) GetTaskByID(taskID string, userID string) (task_models.Task, error) {
+func (storage *Storage) GetTaskByID(taskID string, userID string) (taskmodels.Task, error) {
 	if len(storage.tasks) == 0 {
-		return task_models.Task{}, task_errors.FoundNothingErr
+		return taskmodels.Task{}, taskerrors.ErrFoundNothing
 	}
 
-	var task task_models.Task
+	var task taskmodels.Task
 
 	for _, userTasks := range storage.tasks {
 		if userTasks.UserID == userID {
@@ -40,13 +40,13 @@ func (storage *Storage) GetTaskByID(taskID string, userID string) (task_models.T
 		}
 	}
 
-	return task_models.Task{}, task_errors.FoundNothingErr
+	return taskmodels.Task{}, taskerrors.ErrFoundNothing
 }
 
-func (storage *Storage) AddTask(newTask task_models.Task) error {
+func (storage *Storage) AddTask(newTask taskmodels.Task) error {
 	for _, t := range storage.tasks {
 		if t.ID == newTask.ID {
-			return task_errors.ErrorTaskIsAlreadyExist
+			return taskerrors.ErrTaskIsAlreadyExist
 		}
 	}
 
@@ -54,15 +54,15 @@ func (storage *Storage) AddTask(newTask task_models.Task) error {
 	return nil
 }
 
-func (storage *Storage) UpdateTaskAttributes(task task_models.Task) error {
+func (storage *Storage) UpdateTaskAttributes(task taskmodels.Task) error {
 	for _, t := range storage.tasks {
 		if t.ID == task.ID {
-			t.Attributes = task.Attributes
+			t.Attributes = task.Attributes //nolint:govet // Нам не важно, копия это или нет
 			storage.tasks[task.ID] = task
 			return nil
 		}
 	}
-	return task_errors.FoundNothingErr
+	return taskerrors.ErrFoundNothing
 }
 func (storage *Storage) DeleteTask(taskID string, userID string) error {
 	for _, t := range storage.tasks {
@@ -72,9 +72,10 @@ func (storage *Storage) DeleteTask(taskID string, userID string) error {
 		}
 	}
 
-	return task_errors.FoundNothingErr
+	return taskerrors.ErrFoundNothing
 }
 
+//nolint:revive // Возможна будущая реализация, но нужно объявление для соблюдения интерфейса
 func (storage *Storage) MarkTaskToDelete(taskID string, userID string) error {
 	return nil
 }

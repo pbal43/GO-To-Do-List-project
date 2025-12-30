@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 	"toDoList/internal"
 	"toDoList/internal/repository/db"
 	"toDoList/internal/repository/inmemory"
@@ -33,8 +31,6 @@ func main() {
 		cancel()
 	}()
 
-	// конфигураця приложения
-	fmt.Println("To-do-list Api is starting")
 	cfg := internal.ReadConfig()
 
 	log := logger.Init(cfg.Debug)
@@ -54,17 +50,19 @@ func main() {
 		database = postgresDB
 		// запуск миграции
 		if err = db.Migrations(cfg.DNS, cfg.MigratePath); err != nil {
-			log.Fatal().Err(err).Msg("failed to migrate db")
+			cancel()
+			log.Error().Err(err).Msg("failed to migrate db")
+			return
 		}
 	}
-	taskDeleter := workers.NewTaskBatchDeleter(database, ctx, cfg.TaskCapacity, log)
+	taskDeleter := workers.NewTaskBatchDeleter(ctx, database, cfg.TaskCapacity, log)
 
 	signer := auth.HS256Signer{
 		Secret:     []byte("ultraSecretKey123"),
 		Issuer:     "todolistService",
 		Audience:   "todolistClient",
-		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 24 * 7 * time.Hour,
+		AccessTTL:  internal.FifteenMin,
+		RefreshTTL: internal.OneWeek,
 	}
 
 	srv := server.NewServer(cfg, database, signer, taskDeleter)
@@ -93,9 +91,9 @@ func main() {
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		err = srv.ShutDown(ctx)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), internal.TenSec)
+		defer shutdownCancel()
+		err = srv.ShutDown(shutdownCtx)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to shutdown server")
 		}

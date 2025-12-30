@@ -3,9 +3,9 @@ package db
 import (
 	"context"
 	"errors"
-	"time"
-	"toDoList/internal/domain/task/task_errors"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal"
+	"toDoList/internal/domain/task/taskerrors"
+	"toDoList/internal/domain/task/taskmodels"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -16,18 +16,22 @@ type taskStorage struct {
 	db PgxIface
 }
 
-func (ts *taskStorage) GetAllTasks(userID string) ([]task_models.Task, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (ts *taskStorage) GetAllTasks(userID string) ([]taskmodels.Task, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
-	rows, err := ts.db.Query(ctx, "SELECT * FROM tasks where userid = $1", userID)
+	rows, err := ts.db.Query(
+		ctx,
+		"SELECT id, userid, status, title, description, deleted FROM tasks where userid = $1",
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	var tasks []task_models.Task
+	var tasks []taskmodels.Task
 
 	for rows.Next() {
-		var task task_models.Task
+		var task taskmodels.Task
 		if err = rows.Scan(
 			&task.ID,
 			&task.UserID,
@@ -41,18 +45,18 @@ func (ts *taskStorage) GetAllTasks(userID string) ([]task_models.Task, error) {
 		tasks = append(tasks, task)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 	return tasks, nil
 }
 
-func (ts *taskStorage) GetTaskByID(taskID string, userID string) (task_models.Task, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (ts *taskStorage) GetTaskByID(taskID string, userID string) (taskmodels.Task, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
-	var task task_models.Task
-	err := ts.db.QueryRow(ctx, "SELECT * FROM tasks WHERE id = $1 AND userid = $2", taskID, userID).
+	var task taskmodels.Task
+	err := ts.db.QueryRow(ctx, "SELECT id, userid, status, title, description, deleted FROM tasks WHERE id = $1 AND userid = $2", taskID, userID).
 		Scan(
 			&task.ID,
 			&task.UserID,
@@ -63,25 +67,32 @@ func (ts *taskStorage) GetTaskByID(taskID string, userID string) (task_models.Ta
 		)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return task_models.Task{}, task_errors.FoundNothingErr
+			return taskmodels.Task{}, taskerrors.ErrFoundNothing
 		}
-		return task_models.Task{}, err
+		return taskmodels.Task{}, err
 	}
 
 	return task, nil
 }
 
-func (ts *taskStorage) AddTask(newTask task_models.Task) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (ts *taskStorage) AddTask(newTask taskmodels.Task) error {
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
-	_, err := ts.db.Exec(ctx, "INSERT INTO tasks (id, userid, status, title, description) VALUES ($1, $2, $3, $4, $5)",
-		newTask.ID, newTask.UserID, newTask.Attributes.Status, newTask.Attributes.Title, newTask.Attributes.Description)
+	_, err := ts.db.Exec(
+		ctx,
+		"INSERT INTO tasks (id, userid, status, title, description) VALUES ($1, $2, $3, $4, $5)",
+		newTask.ID,
+		newTask.UserID,
+		newTask.Attributes.Status,
+		newTask.Attributes.Title,
+		newTask.Attributes.Description,
+	)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return task_errors.ErrorTaskIsAlreadyExist
+				return taskerrors.ErrTaskIsAlreadyExist
 			}
 		}
 		return err
@@ -89,26 +100,32 @@ func (ts *taskStorage) AddTask(newTask task_models.Task) error {
 	return nil
 }
 
-func (ts *taskStorage) UpdateTaskAttributes(task task_models.Task) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (ts *taskStorage) UpdateTaskAttributes(task taskmodels.Task) error {
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
-	cmd, err := ts.db.Exec(ctx, "UPDATE tasks SET status = $1, title = $2, description = $3 WHERE id = $4",
-		task.Attributes.Status, task.Attributes.Title, task.Attributes.Description, task.ID)
+	cmd, err := ts.db.Exec(
+		ctx,
+		"UPDATE tasks SET status = $1, title = $2, description = $3 WHERE id = $4",
+		task.Attributes.Status,
+		task.Attributes.Title,
+		task.Attributes.Description,
+		task.ID,
+	)
 
 	if err != nil {
 		return err
 	}
 
 	if cmd.RowsAffected() == 0 {
-		return task_errors.FoundNothingErr
+		return taskerrors.ErrFoundNothing
 	}
 
 	return nil
 }
 
 func (ts *taskStorage) DeleteTask(taskID string, userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
 	cmd, err := ts.db.Exec(ctx, "DELETE FROM tasks WHERE id = $1 AND userid = $2", taskID, userID)
@@ -118,31 +135,36 @@ func (ts *taskStorage) DeleteTask(taskID string, userID string) error {
 	}
 
 	if cmd.RowsAffected() == 0 {
-		return task_errors.FoundNothingErr
+		return taskerrors.ErrFoundNothing
 	}
 
 	return nil
 }
 
 func (ts *taskStorage) MarkTaskToDelete(taskID string, userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
-	cmd, err := ts.db.Exec(ctx, "UPDATE tasks SET deleted = true WHERE id = $1 AND userid = $2", taskID, userID)
+	cmd, err := ts.db.Exec(
+		ctx,
+		"UPDATE tasks SET deleted = true WHERE id = $1 AND userid = $2",
+		taskID,
+		userID,
+	)
 
 	if err != nil {
 		return err
 	}
 
 	if cmd.RowsAffected() == 0 {
-		return task_errors.FoundNothingErr
+		return taskerrors.ErrFoundNothing
 	}
 
 	return nil
 }
 
 func (ts *taskStorage) DeleteMarkedTasks() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internal.FiveSec)
 	defer cancel()
 
 	tx, err := ts.db.Begin(ctx)

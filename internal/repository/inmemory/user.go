@@ -1,14 +1,14 @@
 package inmemory
 
 import (
-	"toDoList/internal/domain/user/user_errors"
-	"toDoList/internal/domain/user/user_models"
+	"toDoList/internal/domain/user/usererrors"
+	"toDoList/internal/domain/user/usermodels"
 )
 
 // TODO: протестить локальное хранилище
 
-func (storage *Storage) GetAllUsers() ([]user_models.User, error) {
-	var users []user_models.User
+func (storage *Storage) GetAllUsers() ([]usermodels.User, error) {
+	var users []usermodels.User
 
 	for _, user := range storage.users {
 		users = append(users, user)
@@ -16,56 +16,56 @@ func (storage *Storage) GetAllUsers() ([]user_models.User, error) {
 	return users, nil
 }
 
-func (storage *Storage) SaveUser(user user_models.User) (user_models.User, error) {
+func (storage *Storage) SaveUser(user usermodels.User) (usermodels.User, error) {
 	for _, userInMemory := range storage.users {
 		if user.Email == userInMemory.Email {
-			return user_models.User{}, user_errors.ErrorUserIsAlreadyExist
+			return usermodels.User{}, usererrors.ErrUserIsAlreadyExist
 		}
 	}
 
-	storage.users[user.Uuid] = user
+	storage.users[user.UUID] = user
 
 	return user, nil
 }
 
-func (storage *Storage) GetUserByID(userID string) (user_models.User, error) {
+func (storage *Storage) GetUserByID(userID string) (usermodels.User, error) {
 	user, ok := storage.users[userID]
 	if !ok {
-		return user_models.User{}, user_errors.ErrorUserNotExist
+		return usermodels.User{}, usererrors.ErrUserNotExist
 	}
 
 	return user, nil
 }
 
-func (storage *Storage) GetUserByEmail(email string) (user_models.User, error) {
-	var user user_models.User
+func (storage *Storage) GetUserByEmail(email string) (usermodels.User, error) {
+	var user usermodels.User
 	for _, userInMemory := range storage.users {
 		if userInMemory.Email == email {
 			user = userInMemory
 			return user, nil
 		}
 	}
-	return user_models.User{}, user_errors.ErrorUserNotExist
+	return usermodels.User{}, usererrors.ErrUserNotExist
 }
 
-func (storage *Storage) UpdateUser(user user_models.User) (user_models.User, error) {
+func (storage *Storage) UpdateUser(user usermodels.User) (usermodels.User, error) {
 	for _, userInMemory := range storage.users {
-		if userInMemory.Uuid == user.Uuid {
+		if userInMemory.UUID == user.UUID {
 			userInMemory.Name = user.Name
 			userInMemory.Email = user.Email
 			userInMemory.Password = user.Password
 
-			storage.users[user.Uuid] = userInMemory
+			storage.users[user.UUID] = userInMemory
 			return user, nil
 		}
 	}
-	return user_models.User{}, user_errors.ErrorUserNotExist
+	return usermodels.User{}, usererrors.ErrUserNotExist
 }
 
 func (storage *Storage) DeleteUser(userID string) error {
 	_, ok := storage.users[userID]
 	if !ok {
-		return user_errors.ErrorUserNotExist
+		return usererrors.ErrUserNotExist
 	}
 	delete(storage.users, userID)
 	return nil

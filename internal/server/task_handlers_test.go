@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"toDoList/internal/domain/task/task_models"
+	"toDoList/internal/domain/task/taskmodels"
 	"toDoList/internal/server/mocks"
 	"toDoList/internal/server/workers"
 
@@ -18,19 +18,19 @@ import (
 )
 
 func TestGetTasks(t *testing.T) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
-	testTasks := []task_models.Task{
-		{ID: "task1", UserID: "user1", Attributes: task_models.TaskAttributes{Title: "Task 1"}},
-		{ID: "task2", UserID: "user1", Attributes: task_models.TaskAttributes{Title: "Task 2"}},
+	testTasks := []taskmodels.Task{
+		{ID: "task1", UserID: "user1", Attributes: taskmodels.TaskAttributes{Title: "Task 1"}},
+		{ID: "task2", UserID: "user1", Attributes: taskmodels.TaskAttributes{Title: "Task 2"}},
 	}
 
 	tests := []struct {
 		name         string
 		userIDCtx    any
 		mockFlag     bool
-		mockTasks    []task_models.Task
+		mockTasks    []taskmodels.Task
 		mockErr      error
 		wantStatus   int
 		wantContains string
@@ -48,7 +48,7 @@ func TestGetTasks(t *testing.T) {
 			name:         "Empty task list",
 			userIDCtx:    "user1",
 			mockFlag:     true,
-			mockTasks:    []task_models.Task{},
+			mockTasks:    []taskmodels.Task{},
 			mockErr:      nil,
 			wantStatus:   http.StatusOK,
 			wantContains: "Task list is empty",
@@ -81,7 +81,7 @@ func TestGetTasks(t *testing.T) {
 			repo := mocks.NewStorage(t)
 			srv.db = repo
 
-			taskDeleter := workers.NewTaskBatchDeleter(srv.db, context.Background(), 10, zerolog.Nop())
+			taskDeleter := workers.NewTaskBatchDeleter(context.Background(), srv.db, 10, zerolog.Nop())
 			srv.taskDeleter = taskDeleter
 
 			r := gin.New()
@@ -112,7 +112,7 @@ func TestGetTasks(t *testing.T) {
 }
 
 func TestCreateTask(t *testing.T) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	type want struct {
@@ -123,7 +123,7 @@ func TestCreateTask(t *testing.T) {
 	type test struct {
 		name       string
 		taskJSON   string
-		taskFromDB task_models.Task
+		taskFromDB taskmodels.Task
 		userIDCtx  any
 		mockFlag   bool
 		err        error
@@ -139,9 +139,9 @@ func TestCreateTask(t *testing.T) {
 				"description":"Task description",
 				"status":"New"
 			}`,
-			taskFromDB: task_models.Task{
+			taskFromDB: taskmodels.Task{
 				ID: "task123",
-				Attributes: task_models.TaskAttributes{
+				Attributes: taskmodels.TaskAttributes{
 					Title:       "New Task",
 					Description: "Task description",
 					Status:      "New",
@@ -232,18 +232,18 @@ func TestCreateTask(t *testing.T) {
 			repo := mocks.NewStorage(t)
 			srv.db = repo
 
-			taskDeleter := workers.NewTaskBatchDeleter(srv.db, nil, 10, zerolog.Nop())
+			taskDeleter := workers.NewTaskBatchDeleter(context.Background(), srv.db, 10, zerolog.Nop())
 			srv.taskDeleter = taskDeleter
 
 			if tc.mockFlag {
-				repo.On("AddTask", mock.MatchedBy(func(task task_models.Task) bool {
+				repo.On("AddTask", mock.MatchedBy(func(task taskmodels.Task) bool {
 					return task.Attributes.Title == tc.taskFromDB.Attributes.Title &&
 						task.Attributes.Description == tc.taskFromDB.Attributes.Description &&
 						task.Attributes.Status == tc.taskFromDB.Attributes.Status &&
 						task.UserID == tc.taskFromDB.UserID
 				})).Return(tc.err).Run(func(args mock.Arguments) {
-					argTask := args.Get(0).(task_models.Task)
-					argTask.ID = tc.taskFromDB.ID
+					argTask := args.Get(0).(taskmodels.Task)
+					argTask.ID = tc.taskFromDB.ID //nolint:govet // Ругается, хотя нужно для тестов, оставляем
 				})
 			}
 
@@ -261,7 +261,7 @@ func TestCreateTask(t *testing.T) {
 }
 
 func TestGetTaskByID(t *testing.T) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	type want struct {
@@ -272,7 +272,7 @@ func TestGetTaskByID(t *testing.T) {
 	type test struct {
 		name       string
 		taskID     string
-		taskFromDB task_models.Task
+		taskFromDB taskmodels.Task
 		mockFlag   bool
 		err        error
 		userIDCtx  any
@@ -284,13 +284,13 @@ func TestGetTaskByID(t *testing.T) {
 			name:      "Get_task_success",
 			taskID:    "task123",
 			userIDCtx: "user123",
-			taskFromDB: task_models.Task{
+			taskFromDB: taskmodels.Task{
 				ID:     "task123",
 				UserID: "user123",
-				Attributes: task_models.TaskAttributes{
+				Attributes: taskmodels.TaskAttributes{
 					Title:       "Test task",
 					Description: "Desc",
-					Status:      task_models.StatusNew,
+					Status:      taskmodels.StatusNew,
 				},
 			},
 			mockFlag: true,
@@ -349,7 +349,7 @@ func TestGetTaskByID(t *testing.T) {
 			httpSrv := httptest.NewServer(r)
 			defer httpSrv.Close()
 
-			taskDeleter := workers.NewTaskBatchDeleter(srv.db, nil, 10, zerolog.Nop())
+			taskDeleter := workers.NewTaskBatchDeleter(context.Background(), srv.db, 10, zerolog.Nop())
 			srv.taskDeleter = taskDeleter
 
 			if tc.mockFlag {
@@ -370,7 +370,7 @@ func TestGetTaskByID(t *testing.T) {
 }
 
 func TestUpdateTask(t *testing.T) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	type want struct {
@@ -482,7 +482,7 @@ func TestUpdateTask(t *testing.T) {
 			repo := mocks.NewStorage(t)
 			srv.db = repo
 
-			taskDeleter := workers.NewTaskBatchDeleter(repo, context.Background(), 10, zerolog.Nop())
+			taskDeleter := workers.NewTaskBatchDeleter(context.Background(), repo, 10, zerolog.Nop())
 			srv.taskDeleter = taskDeleter
 
 			if tc.mockFlag {
@@ -490,10 +490,10 @@ func TestUpdateTask(t *testing.T) {
 					"GetTaskByID",
 					tc.taskID,
 					"user123",
-				).Return(task_models.Task{
+				).Return(taskmodels.Task{
 					ID:     tc.taskID,
 					UserID: "user123",
-					Attributes: task_models.TaskAttributes{
+					Attributes: taskmodels.TaskAttributes{
 						Title:       "Old",
 						Description: "Old",
 						Status:      "New",
@@ -502,7 +502,7 @@ func TestUpdateTask(t *testing.T) {
 
 				repo.On(
 					"UpdateTaskAttributes",
-					mock.MatchedBy(func(task task_models.Task) bool {
+					mock.MatchedBy(func(task taskmodels.Task) bool {
 						return task.ID == tc.taskID &&
 							task.UserID == "user123" &&
 							task.Attributes.Title == "Updated" &&
@@ -525,7 +525,7 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	var srv ToDoListApi
+	var srv ToDoListAPI
 	gin.SetMode(gin.ReleaseMode)
 
 	type want struct {
@@ -606,7 +606,7 @@ func TestDeleteTask(t *testing.T) {
 			repo := mocks.NewStorage(t)
 			srv.db = repo
 
-			taskDeleter := workers.NewTaskBatchDeleter(repo, context.Background(), 10, zerolog.Nop())
+			taskDeleter := workers.NewTaskBatchDeleter(context.Background(), repo, 10, zerolog.Nop())
 			srv.taskDeleter = taskDeleter
 
 			if tc.mockFlag {
