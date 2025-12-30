@@ -90,9 +90,9 @@ func TestUserStorage_GetAllUsers(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM users").WillReturnError(tt.mockErr)
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users").WillReturnError(tt.mockErr)
 			} else {
-				mock.ExpectQuery("SELECT \\* FROM users").WillReturnRows(tt.mockRows)
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users").WillReturnRows(tt.mockRows)
 			}
 
 			users, err := us.GetAllUsers()
@@ -141,11 +141,11 @@ func TestUserStorage_GetUserByID(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE uuid = \\$1").
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users WHERE uuid = \\$1").
 					WithArgs(tt.userID).
 					WillReturnError(tt.mockErr)
 			} else {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE uuid = \\$1").WithArgs(tt.userID).WillReturnRows(tt.mockRows)
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users WHERE uuid = \\$1").WithArgs(tt.userID).WillReturnRows(tt.mockRows)
 			}
 
 			user, err := us.GetUserByID(tt.userID)
@@ -192,11 +192,11 @@ func TestUserStorage_GetUserByEmail(t *testing.T) {
 			us := &userStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\$1").
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users WHERE email = \\$1").
 					WithArgs(tt.email).
 					WillReturnError(tt.mockErr)
 			} else {
-				mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\$1").WithArgs(tt.email).WillReturnRows(tt.mockRows)
+				mock.ExpectQuery("SELECT uuid, name, email, password FROM users WHERE email = \\$1").WithArgs(tt.email).WillReturnRows(tt.mockRows)
 			}
 
 			user, err := us.GetUserByEmail(tt.email)

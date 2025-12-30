@@ -297,7 +297,7 @@ func TestTaskStorage_GetAllTasks(t *testing.T) {
 			ts := &taskStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM tasks where userid = \\$1").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks where userid = \\$1").
 					WithArgs(tt.userID).
 					WillReturnError(tt.mockErr)
 			} else {
@@ -305,7 +305,7 @@ func TestTaskStorage_GetAllTasks(t *testing.T) {
 				for _, task := range tt.mockData {
 					rows.AddRow(task.ID, task.UserID, task.Attributes.Status, task.Attributes.Title, task.Attributes.Description, task.Deleted)
 				}
-				mock.ExpectQuery("SELECT \\* FROM tasks where userid = \\$1").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks where userid = \\$1").
 					WithArgs(tt.userID).
 					WillReturnRows(rows)
 			}
@@ -364,7 +364,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 			ts := &taskStorage{db: mock}
 
 			if tt.mockErr != nil {
-				mock.ExpectQuery("SELECT \\* FROM tasks WHERE id = \\$1 AND userid = \\$2").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks WHERE id = \\$1 AND userid = \\$2").
 					WithArgs(tt.taskID, tt.userID).
 					WillReturnError(tt.mockErr)
 			} else {
@@ -372,7 +372,7 @@ func TestTaskStorage_GetTaskByID(t *testing.T) {
 					AddRow(tt.mockData.ID, tt.mockData.UserID, tt.mockData.Attributes.Status,
 						tt.mockData.Attributes.Title, tt.mockData.Attributes.Description, tt.mockData.Deleted)
 
-				mock.ExpectQuery("SELECT \\* FROM tasks WHERE id = \\$1 AND userid = \\$2").
+				mock.ExpectQuery("SELECT id, userid, status, title, description, deleted FROM tasks WHERE id = \\$1 AND userid = \\$2").
 					WithArgs(tt.taskID, tt.userID).
 					WillReturnRows(rows)
 			}

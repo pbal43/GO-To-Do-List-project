@@ -39,7 +39,7 @@ func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 			ExpectedIssuer:   signer.GetIssuer(),
 			ExpectedAudience: signer.GetAudience(),
 			AllowMethods:     []string{"HS256"},
-			Leeway:           internal.OneMin,
+			Leeway:           internal.MinOne,
 		})
 
 		//nolint:nestif // Нужно оставить ошибки на проверки
@@ -62,7 +62,7 @@ func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 						ExpectedIssuer:   signer.GetIssuer(),
 						ExpectedAudience: signer.GetAudience(),
 						AllowMethods:     []string{"HS256"},
-						Leeway:           internal.FiveMin,
+						Leeway:           internal.MinFive,
 					},
 				)
 				if errParseRefresh != nil {
@@ -92,7 +92,7 @@ func AuthMiddleware(signer TokenSigner) gin.HandlerFunc {
 					ExpectedIssuer:   signer.GetIssuer(),
 					ExpectedAudience: signer.GetAudience(),
 					AllowMethods:     []string{"HS256"},
-					Leeway:           internal.OneMin,
+					Leeway:           internal.MinOne,
 				})
 				if err != nil {
 					ctx.JSON(

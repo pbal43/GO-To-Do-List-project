@@ -64,7 +64,7 @@ func NewServer(
 ) *ToDoListAPI {
 	HTTPSrv := http.Server{ //nolint:gocritic // Линтеры противоречат друг другу, оставил так
 		Addr:              fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		ReadHeaderTimeout: internal.FiveSec,
+		ReadHeaderTimeout: internal.SecFive,
 	}
 
 	api := ToDoListAPI{srv: &HTTPSrv, db: db, tokenSigner: tokenSigner, taskDeleter: taskDeleter}

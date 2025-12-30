@@ -61,7 +61,7 @@ func main() {
 		Secret:     []byte("ultraSecretKey123"),
 		Issuer:     "todolistService",
 		Audience:   "todolistClient",
-		AccessTTL:  internal.FifteenMin,
+		AccessTTL:  internal.MinFifteen,
 		RefreshTTL: internal.OneWeek,
 	}
 
@@ -91,7 +91,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), internal.TenSec)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), internal.SecTen)
 		defer shutdownCancel()
 		err = srv.ShutDown(shutdownCtx)
 		if err != nil {
