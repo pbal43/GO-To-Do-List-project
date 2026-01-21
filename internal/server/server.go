@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"toDoList/internal"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 )
 
 type UserStorage interface {
@@ -54,6 +56,9 @@ type ToDoListAPI struct {
 	db          Storage
 	tokenSigner TokenSigner
 	taskDeleter *workers.TaskBatchDeleter
+	secure      bool
+	certFile    string
+	keyFile     string
 }
 
 func NewServer(
@@ -65,9 +70,20 @@ func NewServer(
 	HTTPSrv := http.Server{ //nolint:gocritic // Линтеры противоречат друг другу, оставил так
 		Addr:              fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		ReadHeaderTimeout: internal.SecFive,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 	}
 
-	api := ToDoListAPI{srv: &HTTPSrv, db: db, tokenSigner: tokenSigner, taskDeleter: taskDeleter}
+	api := ToDoListAPI{
+		srv:         &HTTPSrv,
+		db:          db,
+		tokenSigner: tokenSigner,
+		taskDeleter: taskDeleter,
+		secure:      cfg.SecureProtocol,
+		certFile:    cfg.CertCert,
+		keyFile:     cfg.KeyCert,
+	}
 
 	api.configRouter()
 
@@ -75,6 +91,14 @@ func NewServer(
 }
 
 func (api *ToDoListAPI) Run() error {
+	if api.secure {
+		log.Info().
+			Str("cert", api.certFile).
+			Msg("Starting HTTPS server")
+		return api.srv.ListenAndServeTLS(api.certFile, api.keyFile)
+	}
+
+	log.Info().Msg("Starting HTTP server")
 	return api.srv.ListenAndServe()
 }
 
