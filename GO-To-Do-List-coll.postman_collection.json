@@ -1,337 +1,284 @@
 {
-	"info": {
-		"_postman_id": "79bfdf1d-22cf-4bc3-ba7e-90c1750d4aa7",
-		"name": "GO-To-Do-List-coll",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "18642055"
-	},
-	"item": [
-		{
-			"name": "getAllTasks",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/todolist/tasks",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"todolist",
-						"tasks"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "createTask",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"id\": \"1123\",\n    \"title\": \"Сегодня\",\n    \"description\": \"Зубки чищу\",\n    \"status\": \"In Progress\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://127.0.0.1:8080/todolist/tasks",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"todolist",
-						"tasks"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getTaskByID",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/todolist/tasks/99273ac3-4e36-4b05-b4b6-aad6f3c74c81",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"todolist",
-						"tasks",
-						"99273ac3-4e36-4b05-b4b6-aad6f3c74c81"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "updateTask",
-			"request": {
-				"method": "PUT",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"id\": \"1123\",\n    \"title\": \"Вчера\",\n    \"description\": \"Зубки чистил\",\n    \"status\": \"Done\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://127.0.0.1:8080/todolist/tasks/6ceeb701-689f-4a92-bf8c-f68223dafb1c",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"todolist",
-						"tasks",
-						"6ceeb701-689f-4a92-bf8c-f68223dafb1c"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "deleteTask",
-			"request": {
-				"method": "DELETE",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/todolist/tasks/8318d526-adb2-4b3a-bceb-41e9652c6d22",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"todolist",
-						"tasks",
-						"8318d526-adb2-4b3a-bceb-41e9652c6d22"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "register",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"let response = pm.response.json();",
-							"",
-							"// Сохраняем значение в переменную окружения",
-							"pm.environment.set(\"uuid\", response.uuid);"
-						],
-						"type": "text/javascript",
-						"packages": {}
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"name\": \"Pasha\",\n    \"email\": \"pbal@yahoo.com\",\n    \"password\": \"unmarshall me\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://127.0.0.1:8080/users/register",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users",
-						"register"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "login",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							""
-						],
-						"type": "text/javascript",
-						"packages": {}
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"email\": \"pbsal@yahoo.com\",\n    \"password\": \"unmarshall me\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://127.0.0.1:8080/users/login",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users",
-						"login"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getUserInfoByID",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/users/0bb0d6fe-3199-40c4-a582-af65718c80ee",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users",
-						"0bb0d6fe-3199-40c4-a582-af65718c80ee"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "getAllUsersInfo",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/users",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "updateUserInfo",
-			"request": {
-				"method": "PUT",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n     \"name\": \"Petr\",\n    \"email\": \"pbsal@yahoo.com\",\n    \"password\": \"olooomome\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://127.0.0.1:8080/users/23dbb345-e290-4010-9979-0746345e5b89",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users",
-						"23dbb345-e290-4010-9979-0746345e5b89"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "deleteUser",
-			"request": {
-				"method": "DELETE",
-				"header": [],
-				"url": {
-					"raw": "http://127.0.0.1:8080/users/168e4b6d-c600-46ff-8987-7c221af99c93",
-					"protocol": "http",
-					"host": [
-						"127",
-						"0",
-						"0",
-						"1"
-					],
-					"port": "8080",
-					"path": [
-						"users",
-						"168e4b6d-c600-46ff-8987-7c221af99c93"
-					]
-				}
-			},
-			"response": []
-		}
-	]
+  "info": {
+    "_postman_id": "79bfdf1d-22cf-4bc3-ba7e-90c1750d4aa7",
+    "name": "GO-To-Do-List-coll",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "18642055"
+  },
+  "item": [
+    {
+      "name": "getAllTasks",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/todolist/tasks",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "todolist",
+            "tasks"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "createTask",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"1123\",\n    \"title\": \"Сегодня\",\n    \"description\": \"Зубки чищу\",\n    \"status\": \"In Progress\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{hostHttps}}/todolist/tasks",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "todolist",
+            "tasks"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getTaskByID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/todolist/tasks/99273ac3-4e36-4b05-b4b6-aad6f3c74c81",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "todolist",
+            "tasks",
+            "99273ac3-4e36-4b05-b4b6-aad6f3c74c81"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "updateTask",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"1123\",\n    \"title\": \"Вчера\",\n    \"description\": \"Зубки чистил\",\n    \"status\": \"Done\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{hostHttps}}/todolist/tasks/6ceeb701-689f-4a92-bf8c-f68223dafb1c",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "todolist",
+            "tasks",
+            "6ceeb701-689f-4a92-bf8c-f68223dafb1c"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "deleteTask",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/todolist/tasks/8318d526-adb2-4b3a-bceb-41e9652c6d22",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "todolist",
+            "tasks",
+            "8318d526-adb2-4b3a-bceb-41e9652c6d22"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "// Сохраняем значение в переменную окружения",
+              "pm.environment.set(\"uuid\", response.uuid);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Pasha\",\n    \"email\": \"pbal@yahoo.com\",\n    \"password\": \"unmarshall me\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{hostHttps}}/users/register",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"pbal@yahoo.com\",\n    \"password\": \"unmarshall me\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{hostHttps}}/users/login",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getUserInfoByID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/users/0bb0d6fe-3199-40c4-a582-af65718c80ee",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users",
+            "0bb0d6fe-3199-40c4-a582-af65718c80ee"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getAllUsersInfo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/users",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "updateUserInfo",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n     \"name\": \"Petr\",\n    \"email\": \"pbsal@yahoo.com\",\n    \"password\": \"olooomome\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{hostHttps}}/users/23dbb345-e290-4010-9979-0746345e5b89",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users",
+            "23dbb345-e290-4010-9979-0746345e5b89"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "deleteUser",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{hostHttps}}/users/168e4b6d-c600-46ff-8987-7c221af99c93",
+          "host": [
+            "{{hostHttps}}"
+          ],
+          "path": [
+            "users",
+            "168e4b6d-c600-46ff-8987-7c221af99c93"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
 }

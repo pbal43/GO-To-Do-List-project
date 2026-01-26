@@ -14,27 +14,35 @@ const (
 	defDNS            = "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
 	defHost           = "0.0.0.0"
 	defPort           = 8080
+	defDebug          = false
 	defMigrationsPath = "migrations"
 	defTaskCapacity   = 10
+	defSecureProtocol = false
 )
 
 type Config struct {
-	Host         string `json:"host"`
-	Port         int    `json:"port"`
-	DNS          string `json:"dns"`
-	MigratePath  string `json:"migrate_path"`
-	Debug        bool   `json:"debug"`
-	TaskCapacity int    `json:"task_capacity"`
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	DNS            string `json:"dns"`
+	MigratePath    string `json:"migrate_path"`
+	Debug          bool   `json:"debug"`
+	TaskCapacity   int    `json:"task_capacity"`
+	SecureProtocol bool   `json:"secure_protocol"`
+	CertCert       string `json:"cert_cert"`
+	KeyCert        string `json:"key_cert"`
 }
 
 type Flags struct {
-	ConfigPath   string
-	Host         string
-	Port         int
-	DNS          string
-	MigratePath  string
-	Debug        bool
-	TaskCapacity int
+	ConfigPath     string
+	Host           string
+	Port           int
+	DNS            string
+	MigratePath    string
+	Debug          bool
+	TaskCapacity   int
+	SecureProtocol bool
+	CertCert       string
+	KeyCert        string
 }
 
 // Дефолты не указывал, так как заданы отдельно.
@@ -42,26 +50,32 @@ func parseFlags() Flags {
 	var flags Flags
 
 	flag.StringVar(&flags.ConfigPath, "c", "", "Path to config file")
-
 	flag.StringVar(&flags.Host, "host", "", "Server host")
 	flag.IntVar(&flags.Port, "port", 0, "Server port")
 	flag.StringVar(&flags.DNS, "dns", "", "DB CONNECTION STRING")
 	flag.StringVar(&flags.MigratePath, "migrate-path", "", "Path to migrations folder")
 	flag.BoolVar(&flags.Debug, "debug", false, "Debug mode")
 	flag.IntVar(&flags.TaskCapacity, "task-capacity", 0, "Task capacity")
+	flag.BoolVar(&flags.SecureProtocol, "s", false, "Use HTTPS")
+	flag.StringVar(&flags.CertCert, "cert", "", "Path to Cert file")
+	flag.StringVar(&flags.KeyCert, "key-cert", "", "Path to Cert Key file")
 
 	flag.Parse()
+
 	return flags
 }
 
 func configFromFlags(flags *Flags) Config {
 	return Config{
-		Host:         flags.Host,
-		Port:         flags.Port,
-		DNS:          flags.DNS,
-		MigratePath:  flags.MigratePath,
-		Debug:        flags.Debug,
-		TaskCapacity: flags.TaskCapacity,
+		Host:           flags.Host,
+		Port:           flags.Port,
+		DNS:            flags.DNS,
+		MigratePath:    flags.MigratePath,
+		Debug:          flags.Debug,
+		TaskCapacity:   flags.TaskCapacity,
+		SecureProtocol: flags.SecureProtocol,
+		CertCert:       flags.CertCert,
+		KeyCert:        flags.KeyCert,
 	}
 }
 
@@ -74,6 +88,9 @@ func configFromEnv() Config {
 	cfg.MigratePath = os.Getenv("MIGRATE_PATH")
 	cfg.Debug, _ = strconv.ParseBool(os.Getenv("DEBUG"))
 	cfg.TaskCapacity, _ = strconv.Atoi(os.Getenv("TASK_CAPACITY"))
+	cfg.SecureProtocol, _ = strconv.ParseBool(os.Getenv("SECURE_PROTOCOL"))
+	cfg.CertCert = os.Getenv("CERT_FILE")
+	cfg.KeyCert = os.Getenv("KEY_FILE")
 
 	return cfg
 }
@@ -104,11 +121,13 @@ func configFromFile(path string) Config {
 
 func defaultConfig() Config {
 	return Config{
-		Host:         defHost,
-		Port:         defPort,
-		DNS:          defDNS,
-		MigratePath:  defMigrationsPath,
-		TaskCapacity: defTaskCapacity,
+		Host:           defHost,
+		Port:           defPort,
+		DNS:            defDNS,
+		MigratePath:    defMigrationsPath,
+		Debug:          defDebug,
+		TaskCapacity:   defTaskCapacity,
+		SecureProtocol: defSecureProtocol,
 	}
 }
 
@@ -164,6 +183,31 @@ func ReadConfig() Config {
 		fileCfg.TaskCapacity,
 		defCfg.TaskCapacity,
 	)
+
+	config.SecureProtocol = cmp.Or(
+		flagCfg.SecureProtocol,
+		envCfg.SecureProtocol,
+		fileCfg.SecureProtocol,
+		defCfg.SecureProtocol,
+	)
+
+	config.CertCert = cmp.Or(
+		flagCfg.CertCert,
+		envCfg.CertCert,
+		fileCfg.CertCert,
+		defCfg.CertCert,
+	)
+
+	config.KeyCert = cmp.Or(
+		flagCfg.KeyCert,
+		envCfg.KeyCert,
+		fileCfg.KeyCert,
+		defCfg.KeyCert,
+	)
+
+	if config.CertCert == "" || config.KeyCert == "" {
+		config.SecureProtocol = false
+	}
 
 	return config
 }

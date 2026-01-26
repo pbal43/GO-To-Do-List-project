@@ -17,3 +17,6 @@ docker container prune
 docker rm -f postgres
 docker volume rm $(docker volume ls -q)
 
+
+hostHttps = https://127.0.0.1:8443
+hostHttp = https://127.0.0.1:8443

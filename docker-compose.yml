@@ -3,12 +3,16 @@ services:
     container_name: todolist
     build: .
     ports:
-      - 8080:8080
+      - 8443:8080
     environment:
       - DB_DNS=postgres://postgres:postgres@db:5432/todolist?sslmode=disable
       - MIGRATE_PATH=migrations
+      - SECURE_PROTOCOL=true
+      - CERT_FILE=/root/certs/cert.pem
+      - KEY_FILE=/root/certs/key.pem
     volumes:
       - ./migrations:/root/migrations
+      - ./certs:/root/certs
     depends_on:
       db:
         condition: service_healthy
